@@ -78,17 +78,6 @@ function AuthForm({ onDone }: { onDone?: () => void }) {
   );
 }
 
-function AuthBar({ user, username }: { user: User | null; username: string }) {
-  if (user) {
-    return (
-      <div className="flex items-center justify-center gap-3 font-bold">
-        <span>🐔 Signed in as {username}</span>
-        <button onClick={() => supabase.auth.signOut()} className="rounded-full border-2 border-border px-3 py-1 text-sm">Log out</button>
-      </div>
-    );
-  }
-  return <AuthForm />;
-}
 
 export function Index() {
   const [pack, setPack] = useState<Card[] | null>(null);
@@ -142,10 +131,15 @@ export function Index() {
 
   return (
     <main className="min-h-screen px-4 py-8 farm-bg">
-      <div className="mb-6"><AuthBar user={user} username={username} /></div>
       <header className="text-center mb-8">
         <h1 className="font-display text-5xl md:text-7xl text-primary drop-shadow-title">Cluck Packs</h1>
         <p className="mt-2 text-muted-foreground font-bold">Packs opened: {opened} · Collection {count}/{CARDS.length}</p>
+        {user && (
+          <p className="mt-1 text-sm font-bold text-muted-foreground">
+            🐔 {username} ·{" "}
+            <button onClick={() => supabase.auth.signOut()} className="underline">Log out</button>
+          </p>
+        )}
       </header>
 
       <section className="flex flex-col items-center min-h-[460px]">
