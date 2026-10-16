@@ -68,10 +68,10 @@ function AuthForm({ onDone }: { onDone?: () => void }) {
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="flex flex-wrap justify-center gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="rounded-lg border-2 border-border bg-card px-3 py-1" />
-        <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder="Password" className="rounded-lg border-2 border-border bg-card px-3 py-1" />
-        <button disabled={busy} onClick={() => go("in")} className="rounded-full bg-primary px-4 py-1 font-bold text-primary-foreground">Log in</button>
-        <button disabled={busy} onClick={() => go("up")} className="rounded-full border-2 border-primary px-4 py-1 font-bold text-primary">Sign up</button>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-36 rounded-xl border-2 border-border bg-background/70 px-4 py-2 font-bold outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30" />
+        <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder="Password" className="w-36 rounded-xl border-2 border-border bg-background/70 px-4 py-2 font-bold outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30" />
+        <button disabled={busy} onClick={() => go("in")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Log in</button>
+        <button disabled={busy} onClick={() => go("up")} className="rounded-full border-2 border-primary px-5 py-2 font-bold text-primary transition-transform hover:scale-105 active:scale-95">Sign up</button>
       </div>
       <p className="text-xs text-muted-foreground">{err || "Log in to save your chickens to your account"}</p>
     </div>
@@ -80,13 +80,20 @@ function AuthForm({ onDone }: { onDone?: () => void }) {
 
 function TitlePage({ loading }: { loading?: boolean }) {
   return (
-    <main className="min-h-screen farm-bg flex flex-col items-center justify-center px-4 py-10 text-center">
-      <div className="text-7xl">🐔</div>
-      <h1 className="font-display mt-3 text-5xl md:text-7xl text-primary drop-shadow-title">Welcome to the coop</h1>
-      <p className="mt-4 max-w-md text-lg font-bold text-muted-foreground">
+    <main className="relative min-h-screen overflow-hidden farm-bg flex flex-col items-center justify-center px-4 py-10 text-center">
+      <div className="sunburst" aria-hidden />
+      <div className="sun-disc" aria-hidden />
+      <div className="cloud h-6 w-24" style={{ top: "16%", left: "-12%", animationDuration: "45s" }} aria-hidden />
+      <div className="cloud h-8 w-32" style={{ top: "34%", left: "-25%", animationDuration: "70s", animationDelay: "-25s" }} aria-hidden />
+      <span className="feather text-2xl" style={{ left: "12%", animationDuration: "9s" }} aria-hidden>🪶</span>
+      <span className="feather text-xl" style={{ left: "82%", animationDuration: "13s", animationDelay: "-5s" }} aria-hidden>🪶</span>
+      <span className="feather text-2xl" style={{ left: "45%", animationDuration: "11s", animationDelay: "-7s" }} aria-hidden>🌾</span>
+      <div className="text-8xl drop-shadow-title" style={{ animation: "bob 3s ease-in-out infinite" }}>🐔</div>
+      <h1 className="font-display mt-3 text-5xl md:text-7xl golden-title">Welcome to the coop</h1>
+      <p className="mt-4 max-w-md text-lg font-bold text-foreground/80">
         Stay at the bottom and be a chickadee, or ride to the top to become an alpha rooster
       </p>
-      <div className="mt-8 w-full max-w-sm rounded-2xl border-2 border-border bg-card p-6 shadow-2xl">
+      <div className="relative mt-8 w-full max-w-sm rounded-2xl border-2 border-border bg-card/90 p-6 shadow-2xl backdrop-blur">
         {loading ? <p className="font-bold text-muted-foreground">waking the flock…</p> : <AuthForm />}
       </div>
     </main>
@@ -145,8 +152,11 @@ export function Index() {
   if (signedOut) return <TitlePage />;
 
   return (
-    <main className="min-h-screen px-4 py-8 farm-bg">
-      <header className="text-center mb-8">
+    <main className="relative min-h-screen overflow-hidden px-4 py-8 farm-bg">
+      <div className="sunburst" aria-hidden />
+      <div className="sun-disc" aria-hidden />
+      <div className="cloud h-7 w-28" style={{ top: "12%", left: "-15%", animationDuration: "60s" }} aria-hidden />
+      <header className="relative text-center mb-8">
         <h1 className="font-display text-5xl md:text-7xl text-primary drop-shadow-title">Cluck Packs</h1>
         <p className="mt-2 text-muted-foreground font-bold">Packs opened: {opened} · Collection {count}/{CARDS.length}</p>
         {user && (
