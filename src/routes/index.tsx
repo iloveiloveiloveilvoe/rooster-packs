@@ -156,10 +156,10 @@ export function Index() {
                 {pack!.map((c, i) => <TCard key={i} c={c} small />)}
               </div>
             )}
-            <button onClick={rip} disabled={ripping} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
+            <button onClick={rip} disabled={ripping || signedOut} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
               <span className="text-6xl">🐔</span>
               <span className="font-display text-2xl mt-2">CLUCK PACK</span>
-              <span className="text-xs font-bold opacity-80">5 cards · tap to rip</span>
+              <span className="text-xs font-bold opacity-80">{signedOut ? "🔒 log in to rip" : "5 cards · tap to rip"}</span>
             </button>
           </>
         ) : (
