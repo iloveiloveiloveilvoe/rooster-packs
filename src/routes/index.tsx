@@ -35,9 +35,19 @@ const CARDS: Card[] = [
   { id: 12, name: "Phoenix Cluck", emoji: "🔥", type: "Mythic", hp: 180, move: "Rebirth Blaze — 120", rarity: "legendary" },
 ];
 
-function roll(): Card {
+const SELL: Record<Rarity, number> = { common: 5, rare: 15, epic: 40, legendary: 150 };
+
+type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
+// odds = [legendary, epic, rare] cumulative thresholds; rest is common
+const PACKS: PackType[] = [
+  { id: "cluck", name: "Cluck Pack", emoji: "🐔", cost: 50, cards: 5, odds: [0.03, 0.13, 0.38], blurb: "The classic. 5 cards." },
+  { id: "golden", name: "Golden Pack", emoji: "🌟", cost: 120, cards: 5, odds: [0.08, 0.28, 0.6], blurb: "Better odds for shiny pulls." },
+  { id: "mega", name: "Mega Coop Pack", emoji: "🏆", cost: 250, cards: 10, odds: [0.1, 0.35, 0.7], blurb: "10 cards, fat odds, big coop energy." },
+];
+
+function roll(odds: [number, number, number]): Card {
   const r = Math.random();
-  const rar: Rarity = r < 0.03 ? "legendary" : r < 0.13 ? "epic" : r < 0.38 ? "rare" : "common";
+  const rar: Rarity = r < odds[0] ? "legendary" : r < odds[1] ? "epic" : r < odds[2] ? "rare" : "common";
   const pool = CARDS.filter((c) => c.rarity === rar);
   return pool[Math.floor(Math.random() * pool.length)]!;
 }
@@ -100,15 +110,20 @@ function TitlePage({ loading }: { loading?: boolean }) {
   );
 }
 
+type Tab = "shop" | "rip" | "coop";
+
 export function Index() {
-  const [pack, setPack] = useState<Card[] | null>(null);
+  const [tab, setTab] = useState<Tab>("shop");
+  const [pack, setPack] = useState<{ cards: Card[]; type: PackType } | null>(null);
   const [revealed, setRevealed] = useState(0);
   const [ripping, setRipping] = useState(false);
   const [owned, setOwned] = useState<Record<number, number>>({});
   const [opened, setOpened] = useState(0);
+  const [coins, setCoins] = useState(100);
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [toast, setToast] = useState("");
   const signedOut = loaded && !user;
 
   useEffect(() => {
@@ -122,31 +137,48 @@ export function Index() {
     if (!user) {
       const s = localStorage.getItem("cluck");
       const d = s ? JSON.parse(s) : {};
-      setOwned(d.owned || {}); setOpened(d.opened || 0); setUsername(""); setLoaded(true);
+      setOwned(d.owned || {}); setOpened(d.opened || 0); setCoins(d.coins ?? 100); setUsername(""); setLoaded(true);
       return;
     }
-    supabase.from("profiles").select("username, owned, opened").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) { setOwned((data.owned as Record<number, number>) || {}); setOpened(data.opened); setUsername(data.username); }
+    supabase.from("profiles").select("username, owned, opened, coins").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data) { setOwned((data.owned as Record<number, number>) || {}); setOpened(data.opened); setCoins(data.coins); setUsername(data.username); }
       setLoaded(true);
     });
   }, [user]);
 
   useEffect(() => {
     if (!loaded) return;
-    if (user) supabase.from("profiles").update({ owned, opened, updated_at: new Date().toISOString() }).eq("id", user.id).then();
-    else localStorage.setItem("cluck", JSON.stringify({ owned, opened }));
-  }, [owned, opened, loaded, user]);
+    if (user) supabase.from("profiles").update({ owned, opened, coins, updated_at: new Date().toISOString() }).eq("id", user.id).then();
+    else localStorage.setItem("cluck", JSON.stringify({ owned, opened, coins }));
+  }, [owned, opened, coins, loaded, user]);
 
-  const rip = () => {
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const buy = (p: PackType) => {
+    if (coins < p.cost) return setToast("Not enough coins — sell some cards!");
+    setCoins((c) => c - p.cost);
     setRipping(true);
+    setTab("rip");
+    setPack(null);
     setTimeout(() => {
-      const cards = Array.from({ length: 5 }, roll).sort((a, b) => order(a) - order(b));
-      setPack(cards); setRevealed(0); setRipping(false); setOpened((o) => o + 1);
+      const cards = Array.from({ length: p.cards }, () => roll(p.odds)).sort((a, b) => order(a) - order(b));
+      setPack({ cards, type: p }); setRevealed(0); setRipping(false); setOpened((o) => o + 1);
       setOwned((o) => { const n = { ...o }; cards.forEach((c) => (n[c.id] = (n[c.id] || 0) + 1)); return n; });
     }, 700);
   };
 
-  const done = pack && revealed >= pack.length;
+  const sell = (c: Card) => {
+    if (!owned[c.id]) return;
+    setOwned((o) => { const n = { ...o }; n[c.id]!--; if (!n[c.id]) delete n[c.id]; return n; });
+    setCoins((v) => v + SELL[c.rarity]);
+    setToast(`Sold ${c.name} for ${SELL[c.rarity]} coins 🪙`);
+  };
+
+  const done = pack && revealed >= pack.cards.length;
   const count = Object.keys(owned).length;
   if (!loaded) return <TitlePage loading />;
   if (signedOut) return <TitlePage />;
@@ -156,53 +188,95 @@ export function Index() {
       <div className="sunburst" aria-hidden />
       <div className="sun-disc" aria-hidden />
       <div className="cloud h-7 w-28" style={{ top: "12%", left: "-15%", animationDuration: "60s" }} aria-hidden />
-      <header className="relative text-center mb-8">
+      <header className="relative text-center mb-6">
         <h1 className="font-display text-5xl md:text-7xl golden-title">Cluck Packs</h1>
-        <p className="mt-2 text-muted-foreground font-bold">Packs opened: {opened} · Collection {count}/{CARDS.length}</p>
+        <p className="mt-2 text-muted-foreground font-bold">
+          🪙 {coins} coins · Packs opened: {opened} · Collection {count}/{CARDS.length}
+        </p>
         {user && (
           <p className="mt-1 text-sm font-bold text-muted-foreground">
             🐔 {username} ·{" "}
             <button onClick={() => supabase.auth.signOut()} className="underline">Log out</button>
           </p>
         )}
+        <nav className="mt-4 inline-flex rounded-full border-2 border-border bg-card/80 p-1 shadow-lg backdrop-blur">
+          {([["shop", "🛒 Pack Shop"], ["rip", "📦 Rip Zone"], ["coop", "🐔 Your Coop"]] as [Tab, string][]).map(([t, label]) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`rounded-full px-4 py-1.5 text-sm font-black transition-all ${tab === t ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
+              {label}
+            </button>
+          ))}
+        </nav>
+        {toast && <p className="mt-3 inline-block rounded-full bg-primary px-4 py-1 text-sm font-bold text-primary-foreground shadow-lg">{toast}</p>}
       </header>
 
-      <section className="flex flex-col items-center min-h-[460px]">
-        {!pack || done ? (
-          <>
-            {done && (
-              <div className="flex flex-wrap justify-center gap-3 mb-6 max-w-4xl">
-                {pack!.map((c, i) => <TCard key={i} c={c} small />)}
+      {tab === "shop" && (
+        <section className="mx-auto max-w-4xl">
+          <h2 className="font-display text-3xl golden-title mb-1 text-center">Pick your pack</h2>
+          <p className="mb-6 text-center text-sm font-bold text-muted-foreground">Buy here, then rip in the Rip Zone. Sell cards in Your Coop to earn coins.</p>
+          <div className="grid gap-6 sm:grid-cols-3">
+            {PACKS.map((p) => (
+              <div key={p.id} className="flex flex-col items-center rounded-2xl border-2 border-border bg-card/90 p-5 shadow-xl backdrop-blur">
+                <button onClick={() => buy(p)} disabled={ripping} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
+                  <span className="text-6xl">{p.emoji}</span>
+                  <span className="font-display text-xl mt-2">{p.name.toUpperCase()}</span>
+                  <span className="text-xs font-bold opacity-80">{p.cards} cards · tap to buy & rip</span>
+                </button>
+                <p className="mt-3 text-center text-xs font-bold text-muted-foreground">{p.blurb}</p>
+                <p className={`mt-1 font-black ${coins >= p.cost ? "text-foreground" : "text-destructive"}`}>🪙 {p.cost}</p>
               </div>
-            )}
-            <button onClick={rip} disabled={ripping} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
-              <span className="text-6xl">🐔</span>
-              <span className="font-display text-2xl mt-2">CLUCK PACK</span>
-              <span className="text-xs font-bold opacity-80">5 cards · tap to rip</span>
-            </button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-4">
-            <button onClick={() => setRevealed((r) => r + 1)} className="card-pop" key={revealed}>
-              <TCard c={pack[revealed]!} />
-            </button>
-            <p className="font-bold text-muted-foreground">Tap card · {revealed + 1}/{pack.length}</p>
+            ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
-      <section className="max-w-5xl mx-auto mt-12">
-        <h2 className="font-display text-3xl golden-title mb-4">Your Coop</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-          {CARDS.map((c) => owned[c.id] ? (
-            <div key={c.id} className="relative"><TCard c={c} small />
-              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span></div>
+      {tab === "rip" && (
+        <section className="flex flex-col items-center min-h-[460px]">
+          <h2 className="font-display text-3xl golden-title mb-6">Rip Zone</h2>
+          {ripping ? (
+            <div className="pack pack-rip"><span className="text-6xl">🐔</span><span className="font-display text-2xl mt-2">RIPPING…</span></div>
+          ) : !pack ? (
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="text-7xl" style={{ animation: "bob 3s ease-in-out infinite" }}>📦</div>
+              <p className="font-bold text-muted-foreground">Nothing to rip yet — grab a pack from the Pack Shop!</p>
+              <button onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Go to the shop</button>
+            </div>
+          ) : done ? (
+            <div className="flex flex-col items-center">
+              <div className="flex flex-wrap justify-center gap-3 mb-6 max-w-4xl">
+                {pack.cards.map((c, i) => <TCard key={i} c={c} small />)}
+              </div>
+              <button onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Buy another pack</button>
+            </div>
           ) : (
-            <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
-          ))}
-        </div>
-      </section>
+            <div className="flex flex-col items-center gap-4">
+              <p className="font-black text-muted-foreground">{pack.type.name}</p>
+              <button onClick={() => setRevealed((r) => r + 1)} className="card-pop" key={revealed}>
+                <TCard c={pack.cards[revealed]!} />
+              </button>
+              <p className="font-bold text-muted-foreground">Tap card · {revealed + 1}/{pack.cards.length}</p>
+            </div>
+          )}
+        </section>
+      )}
 
+      {tab === "coop" && (
+        <section className="max-w-5xl mx-auto">
+          <h2 className="font-display text-3xl golden-title mb-1">Your Coop</h2>
+          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙5 · rare 🪙15 · epic 🪙40 · legendary 🪙150</p>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {CARDS.map((c) => owned[c.id] ? (
+              <button key={c.id} onClick={() => sell(c)} className="relative transition-transform hover:scale-105 active:scale-95" title={`Sell for ${SELL[c.rarity]} coins`}>
+                <TCard c={c} small />
+                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span>
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-card border border-border px-2 text-[10px] font-black shadow">🪙{SELL[c.rarity]}</span>
+              </button>
+            ) : (
+              <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

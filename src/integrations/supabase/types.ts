@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          coins: number
           id: string
           opened: number
           owned: Json
@@ -23,6 +24,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          coins?: number
           id: string
           opened?: number
           owned?: Json
@@ -30,6 +32,7 @@ export type Database = {
           username: string
         }
         Update: {
+          coins?: number
           id?: string
           opened?: number
           owned?: Json
