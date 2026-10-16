@@ -78,6 +78,20 @@ function AuthForm({ onDone }: { onDone?: () => void }) {
   );
 }
 
+function TitlePage({ loading }: { loading?: boolean }) {
+  return (
+    <main className="min-h-screen farm-bg flex flex-col items-center justify-center px-4 py-10 text-center">
+      <div className="text-7xl">🐔</div>
+      <h1 className="font-display mt-3 text-5xl md:text-7xl text-primary drop-shadow-title">Welcome to the coop</h1>
+      <p className="mt-4 max-w-md text-lg font-bold text-muted-foreground">
+        stay at the bottom and be a chickadee, or ride to the top to become an alpha rooster
+      </p>
+      <div className="mt-8 w-full max-w-sm rounded-2xl border-2 border-border bg-card p-6 shadow-2xl">
+        {loading ? <p className="font-bold text-muted-foreground">waking the flock…</p> : <AuthForm />}
+      </div>
+    </main>
+  );
+}
 
 export function Index() {
   const [pack, setPack] = useState<Card[] | null>(null);
@@ -88,7 +102,6 @@ export function Index() {
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const [authOpen, setAuthOpen] = useState(true);
   const signedOut = loaded && !user;
 
   useEffect(() => {
@@ -128,6 +141,8 @@ export function Index() {
 
   const done = pack && revealed >= pack.length;
   const count = Object.keys(owned).length;
+  if (!loaded) return <TitlePage loading />;
+  if (signedOut) return <TitlePage />;
 
   return (
     <main className="min-h-screen px-4 py-8 farm-bg">
@@ -150,10 +165,10 @@ export function Index() {
                 {pack!.map((c, i) => <TCard key={i} c={c} small />)}
               </div>
             )}
-            <button onClick={rip} disabled={ripping || signedOut} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
+            <button onClick={rip} disabled={ripping} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
               <span className="text-6xl">🐔</span>
               <span className="font-display text-2xl mt-2">CLUCK PACK</span>
-              <span className="text-xs font-bold opacity-80">{signedOut ? "🔒 log in to rip" : "5 cards · tap to rip"}</span>
+              <span className="text-xs font-bold opacity-80">5 cards · tap to rip</span>
             </button>
           </>
         ) : (
