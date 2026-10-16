@@ -134,6 +134,12 @@ export function Index() {
       <header className="text-center mb-8">
         <h1 className="font-display text-5xl md:text-7xl text-primary drop-shadow-title">Cluck Packs</h1>
         <p className="mt-2 text-muted-foreground font-bold">Packs opened: {opened} · Collection {count}/{CARDS.length}</p>
+        {user && (
+          <p className="mt-1 text-sm font-bold text-muted-foreground">
+            🐔 {username} ·{" "}
+            <button onClick={() => supabase.auth.signOut()} className="underline">Log out</button>
+          </p>
+        )}
       </header>
 
       <section className="flex flex-col items-center min-h-[460px]">
