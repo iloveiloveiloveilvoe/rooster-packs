@@ -37,7 +37,7 @@ function roll(): Card {
   const r = Math.random();
   const rar: Rarity = r < 0.03 ? "legendary" : r < 0.13 ? "epic" : r < 0.38 ? "rare" : "common";
   const pool = CARDS.filter((c) => c.rarity === rar);
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pool[Math.floor(Math.random() * pool.length)]!;
 }
 
 export function Index() {
@@ -89,7 +89,7 @@ export function Index() {
         ) : (
           <div className="flex flex-col items-center gap-4">
             <button onClick={() => setRevealed((r) => r + 1)} className="card-pop" key={revealed}>
-              <TCard c={pack[revealed]} />
+              <TCard c={pack[revealed]!} />
             </button>
             <p className="font-bold text-muted-foreground">Tap card · {revealed + 1}/{pack.length}</p>
           </div>
