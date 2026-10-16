@@ -99,6 +99,8 @@ export function Index() {
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [authOpen, setAuthOpen] = useState(true);
+  const signedOut = loaded && !user;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
