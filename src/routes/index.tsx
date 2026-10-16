@@ -157,7 +157,7 @@ export function Index() {
       <div className="sun-disc" aria-hidden />
       <div className="cloud h-7 w-28" style={{ top: "12%", left: "-15%", animationDuration: "60s" }} aria-hidden />
       <header className="relative text-center mb-8">
-        <h1 className="font-display text-5xl md:text-7xl text-primary drop-shadow-title">Cluck Packs</h1>
+        <h1 className="font-display text-5xl md:text-7xl golden-title">Cluck Packs</h1>
         <p className="mt-2 text-muted-foreground font-bold">Packs opened: {opened} · Collection {count}/{CARDS.length}</p>
         {user && (
           <p className="mt-1 text-sm font-bold text-muted-foreground">
@@ -192,13 +192,13 @@ export function Index() {
       </section>
 
       <section className="max-w-5xl mx-auto mt-12">
-        <h2 className="font-display text-3xl text-primary mb-4">Your Coop</h2>
+        <h2 className="font-display text-3xl golden-title mb-4">Your Coop</h2>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
           {CARDS.map((c) => owned[c.id] ? (
             <div key={c.id} className="relative"><TCard c={c} small />
               <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span></div>
           ) : (
-            <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border flex items-center justify-center text-3xl text-muted-foreground">?</div>
+            <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
           ))}
         </div>
       </section>
