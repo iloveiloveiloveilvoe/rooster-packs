@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN coins integer NOT NULL DEFAULT 100;
