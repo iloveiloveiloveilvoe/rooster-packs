@@ -44,20 +44,11 @@ function roll(): Card {
 
 const toEmail = (name: string) => `${name.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "")}@cluckpacks.app`;
 
-function AuthBar({ user, username }: { user: User | null; username: string }) {
+function AuthForm({ onDone }: { onDone?: () => void }) {
   const [name, setName] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-
-  if (user) {
-    return (
-      <div className="flex items-center justify-center gap-3 font-bold">
-        <span>🐔 Signed in as {username}</span>
-        <button onClick={() => supabase.auth.signOut()} className="rounded-full border-2 border-border px-3 py-1 text-sm">Log out</button>
-      </div>
-    );
-  }
 
   const go = async (mode: "in" | "up") => {
     setErr("");
@@ -71,6 +62,7 @@ function AuthBar({ user, username }: { user: User | null; username: string }) {
       : await supabase.auth.signInWithPassword({ email, password: pw });
     setBusy(false);
     if (error) setErr(mode === "up" && /registered/i.test(error.message) ? "That name is taken" : mode === "in" ? "Wrong name or password" : error.message);
+    else onDone?.();
   };
 
   return (
@@ -84,6 +76,18 @@ function AuthBar({ user, username }: { user: User | null; username: string }) {
       <p className="text-xs text-muted-foreground">{err || "Log in to save your chickens to your account"}</p>
     </div>
   );
+}
+
+function AuthBar({ user, username }: { user: User | null; username: string }) {
+  if (user) {
+    return (
+      <div className="flex items-center justify-center gap-3 font-bold">
+        <span>🐔 Signed in as {username}</span>
+        <button onClick={() => supabase.auth.signOut()} className="rounded-full border-2 border-border px-3 py-1 text-sm">Log out</button>
+      </div>
+    );
+  }
+  return <AuthForm />;
 }
 
 export function Index() {
