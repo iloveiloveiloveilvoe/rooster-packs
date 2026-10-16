@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,18 +42,85 @@ function roll(): Card {
   return pool[Math.floor(Math.random() * pool.length)]!;
 }
 
+const toEmail = (name: string) => `${name.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "")}@cluckpacks.app`;
+
+function AuthBar({ user, username }: { user: User | null; username: string }) {
+  const [name, setName] = useState("");
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  if (user) {
+    return (
+      <div className="flex items-center justify-center gap-3 font-bold">
+        <span>🐔 Signed in as {username}</span>
+        <button onClick={() => supabase.auth.signOut()} className="rounded-full border-2 border-border px-3 py-1 text-sm">Log out</button>
+      </div>
+    );
+  }
+
+  const go = async (mode: "in" | "up") => {
+    setErr("");
+    const clean = name.trim();
+    if (!/^[a-zA-Z0-9_.-]{3,20}$/.test(clean)) return setErr("Name: 3-20 letters, numbers, _ . -");
+    if (pw.length < 6) return setErr("Password must be at least 6 characters");
+    setBusy(true);
+    const email = toEmail(clean);
+    const { error } = mode === "up"
+      ? await supabase.auth.signUp({ email, password: pw, options: { data: { username: clean } } })
+      : await supabase.auth.signInWithPassword({ email, password: pw });
+    setBusy(false);
+    if (error) setErr(mode === "up" && /registered/i.test(error.message) ? "That name is taken" : mode === "in" ? "Wrong name or password" : error.message);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="rounded-lg border-2 border-border bg-card px-3 py-1" />
+        <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder="Password" className="rounded-lg border-2 border-border bg-card px-3 py-1" />
+        <button disabled={busy} onClick={() => go("in")} className="rounded-full bg-primary px-4 py-1 font-bold text-primary-foreground">Log in</button>
+        <button disabled={busy} onClick={() => go("up")} className="rounded-full border-2 border-primary px-4 py-1 font-bold text-primary">Sign up</button>
+      </div>
+      <p className="text-xs text-muted-foreground">{err || "Log in to save your chickens to your account"}</p>
+    </div>
+  );
+}
+
 export function Index() {
   const [pack, setPack] = useState<Card[] | null>(null);
   const [revealed, setRevealed] = useState(0);
   const [ripping, setRipping] = useState(false);
   const [owned, setOwned] = useState<Record<number, number>>({});
   const [opened, setOpened] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
+  const [username, setUsername] = useState("");
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const s = localStorage.getItem("cluck");
-    if (s) { const d = JSON.parse(s); setOwned(d.owned || {}); setOpened(d.opened || 0); }
+    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
+    return () => data.subscription.unsubscribe();
   }, []);
-  useEffect(() => { localStorage.setItem("cluck", JSON.stringify({ owned, opened })); }, [owned, opened]);
+
+  useEffect(() => {
+    setLoaded(false);
+    if (!user) {
+      const s = localStorage.getItem("cluck");
+      const d = s ? JSON.parse(s) : {};
+      setOwned(d.owned || {}); setOpened(d.opened || 0); setUsername(""); setLoaded(true);
+      return;
+    }
+    supabase.from("profiles").select("username, owned, opened").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data) { setOwned((data.owned as Record<number, number>) || {}); setOpened(data.opened); setUsername(data.username); }
+      setLoaded(true);
+    });
+  }, [user]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    if (user) supabase.from("profiles").update({ owned, opened, updated_at: new Date().toISOString() }).eq("id", user.id).then();
+    else localStorage.setItem("cluck", JSON.stringify({ owned, opened }));
+  }, [owned, opened, loaded, user]);
 
   const rip = () => {
     setRipping(true);
@@ -67,6 +136,7 @@ export function Index() {
 
   return (
     <main className="min-h-screen px-4 py-8 farm-bg">
+      <div className="mb-6"><AuthBar user={user} username={username} /></div>
       <header className="text-center mb-8">
         <h1 className="font-display text-5xl md:text-7xl text-primary drop-shadow-title">Cluck Packs</h1>
         <p className="mt-2 text-muted-foreground font-bold">Packs opened: {opened} · Collection {count}/{CARDS.length}</p>
