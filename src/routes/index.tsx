@@ -84,7 +84,7 @@ function TitlePage({ loading }: { loading?: boolean }) {
       <div className="text-7xl">🐔</div>
       <h1 className="font-display mt-3 text-5xl md:text-7xl text-primary drop-shadow-title">Welcome to the coop</h1>
       <p className="mt-4 max-w-md text-lg font-bold text-muted-foreground">
-        stay at the bottom and be a chickadee, or ride to the top to become an alpha rooster
+        Stay at the bottom and be a chickadee, or ride to the top to become an alpha rooster
       </p>
       <div className="mt-8 w-full max-w-sm rounded-2xl border-2 border-border bg-card p-6 shadow-2xl">
         {loading ? <p className="font-bold text-muted-foreground">waking the flock…</p> : <AuthForm />}
