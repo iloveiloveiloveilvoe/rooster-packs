@@ -145,24 +145,87 @@
 @theme inline { --font-display: "Lilita One", cursive; }
 body { font-family: "Nunito", sans-serif; }
 @layer components {
-  .farm-bg { background: radial-gradient(circle at 50% 0%, oklch(0.98 0.08 95), var(--background) 60%); }
-  .drop-shadow-title { text-shadow: 0 4px 0 oklch(0.35 0.12 40); }
-  .pack { width: 13rem; height: 18rem; border-radius: 1rem; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    color: var(--primary-foreground); background: linear-gradient(145deg, oklch(0.7 0.2 50), var(--primary) 60%, oklch(0.4 0.15 25));
-    box-shadow: 0 20px 40px -10px oklch(0.4 0.15 30 / 0.6), inset 0 0 0 4px oklch(0.85 0.15 85); }
+  .farm-bg {
+    background:
+      radial-gradient(140% 55% at 50% 112%, oklch(0.48 0.11 145 / 0.4), transparent 60%),
+      radial-gradient(90% 40% at 50% 108%, oklch(0.55 0.12 130 / 0.45), transparent 72%),
+      linear-gradient(oklch(0.88 0.1 60) 0%, oklch(0.97 0.08 90) 48%, var(--background) 100%);
+  }
+  .drop-shadow-title { text-shadow: 0 3px 0 oklch(0.35 0.12 40), 0 12px 24px oklch(0.4 0.15 45 / 0.35); }
+  .golden-title {
+    background: linear-gradient(100deg, oklch(0.5 0.19 28) 15%, oklch(0.7 0.17 60) 38%, oklch(0.88 0.16 95) 50%, oklch(0.7 0.17 60) 62%, oklch(0.5 0.19 28) 85%);
+    background-size: 220% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: sheen 4s linear infinite;
+    filter: drop-shadow(0 3px 0 oklch(0.32 0.1 30)) drop-shadow(0 12px 22px oklch(0.4 0.15 45 / 0.4));
+  }
+  .sunburst { position: absolute; top: -55vmin; left: 50%; width: 130vmin; height: 130vmin; translate: -50% 0; pointer-events: none;
+    background: repeating-conic-gradient(oklch(1 0.12 95 / 0.16) 0deg 9deg, transparent 9deg 27deg);
+    border-radius: 9999px;
+    -webkit-mask-image: radial-gradient(circle, oklch(1 0 0) 0%, oklch(1 0 0 / 0.6) 40%, transparent 68%);
+    mask-image: radial-gradient(circle, oklch(1 0 0) 0%, oklch(1 0 0 / 0.6) 40%, transparent 68%);
+    animation: spin 60s linear infinite; }
+  .sun-disc { position: absolute; top: 4vmin; left: 50%; translate: -50%; width: 15vmin; height: 15vmin; border-radius: 9999px; pointer-events: none;
+    background: radial-gradient(circle, oklch(0.99 0.09 95 / 0.9) 0%, oklch(0.95 0.13 85 / 0.35) 55%, transparent 75%);
+    animation: breathe 5s ease-in-out infinite; }
+  .cloud { position: absolute; pointer-events: none; background: oklch(1 0.02 95 / 0.85); border-radius: 9999px; filter: blur(3px); animation: drift linear infinite; }
+  .feather { position: absolute; top: -8%; pointer-events: none; opacity: 0.45; animation: flutter linear infinite; }
+
+  .pack { width: 13rem; height: 18rem; border-radius: 1.1rem; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem;
+    color: var(--primary-foreground);
+    background:
+      repeating-linear-gradient(115deg, oklch(1 0 0 / 0.05) 0 3px, transparent 3px 8px),
+      linear-gradient(145deg, oklch(0.76 0.19 55), var(--primary) 55%, oklch(0.36 0.16 28));
+    box-shadow: 0 24px 45px -12px oklch(0.4 0.16 30 / 0.7), inset 0 0 0 4px oklch(0.88 0.15 85), inset 0 0 0 9px oklch(0.5 0.2 35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .pack:hover { transform: scale(1.05) rotate(-1deg);
+    box-shadow: 0 30px 60px -12px oklch(0.4 0.18 40 / 0.85), 0 0 30px oklch(0.8 0.15 80 / 0.5), inset 0 0 0 4px oklch(0.95 0.16 90), inset 0 0 0 9px oklch(0.55 0.2 40); }
+  .pack::before { content: ""; position: absolute; inset: -30% -40%; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, oklch(1 0 0 / 0.4) 50%, transparent 58%);
+    transform: translateX(-70%); animation: sweep 2.8s ease-in-out infinite; }
   .pack-idle { animation: bob 2s ease-in-out infinite; }
-  .pack-rip { animation: shake .7s ease-in; }
-  .tcard { aspect-ratio: 5/7; border-radius: .9rem; padding: .5em; display:flex; flex-direction:column; gap:.4em; border: 4px solid; color: oklch(0.25 0.05 50); }
-  .tcard-art { flex:1; display:flex; align-items:center; justify-content:center; border-radius:.5rem; background: oklch(1 0 0 / .55); }
-  .tcard-move { background: oklch(1 0 0 / .6); border-radius:.4rem; padding:.3em .5em; font-weight:800; }
-  .r-common { background: oklch(0.9 0.04 90); border-color: oklch(0.7 0.05 80); }
-  .r-rare { background: oklch(0.85 0.1 230); border-color: oklch(0.55 0.15 240); box-shadow: 0 0 18px oklch(0.6 0.15 240 / .5); }
-  .r-epic { background: linear-gradient(135deg, oklch(0.8 0.15 330), oklch(0.75 0.15 290)); border-color: oklch(0.5 0.2 320); box-shadow: 0 0 24px oklch(0.6 0.2 320 / .6); }
-  .r-legendary { background: linear-gradient(135deg, oklch(0.92 0.17 95), oklch(0.8 0.18 70), oklch(0.95 0.12 100)); border-color: oklch(0.65 0.17 70);
-    box-shadow: 0 0 36px oklch(0.85 0.18 85 / .9); animation: glow 1.5s ease-in-out infinite alternate; }
-  .card-pop { animation: pop .45s cubic-bezier(.2,1.6,.4,1); }
+  .pack-idle:hover { animation-play-state: paused; }
+  .pack-rip { animation: shake 0.7s ease-in; }
+
+  .tcard { aspect-ratio: 5/7; border-radius: 0.9rem; padding: 0.5em; display: flex; flex-direction: column; gap: 0.4em; border: 4px solid;
+    color: oklch(0.25 0.05 50); position: relative; overflow: hidden;
+    box-shadow: 0 14px 26px -10px oklch(0.3 0.1 50 / 0.4);
+    transition: transform 0.18s ease; }
+  .tcard:hover { transform: translateY(-4px) scale(1.04); }
+  .tcard::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 0.55rem;
+    background: linear-gradient(115deg, transparent 25%, var(--holo, transparent) 45%, oklch(1 0 0 / 0.35) 50%, var(--holo, transparent) 55%, transparent 75%);
+    background-size: 260% 260%; background-position: 0% 50%;
+    opacity: var(--holo-o, 0); animation: holo 3.5s ease-in-out infinite; }
+  .tcard-art { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; background: oklch(1 0 0 / 0.55); }
+  .tcard-move { background: oklch(1 0 0 / 0.6); border-radius: 0.4rem; padding: 0.3em 0.5em; font-weight: 800; }
+  .r-common { --holo-o: 0.25; --holo: oklch(0.8 0.06 90); background: oklch(0.9 0.04 90); border-color: oklch(0.7 0.05 80); }
+  .r-rare { --holo-o: 0.5; --holo: oklch(0.7 0.14 240); background: linear-gradient(150deg, oklch(0.88 0.08 235), oklch(0.82 0.11 250)); border-color: oklch(0.55 0.15 240);
+    box-shadow: 0 0 20px oklch(0.6 0.15 240 / 0.55), 0 14px 26px -10px oklch(0.3 0.1 50 / 0.4); }
+  .r-epic { --holo-o: 0.55; --holo: oklch(0.65 0.2 320); background: linear-gradient(135deg, oklch(0.82 0.14 330), oklch(0.75 0.15 290)); border-color: oklch(0.5 0.2 320);
+    box-shadow: 0 0 26px oklch(0.6 0.2 320 / 0.65), 0 14px 26px -10px oklch(0.3 0.1 50 / 0.4); }
+  .r-legendary { --holo-o: 0.6; --holo: oklch(0.8 0.16 85); background: linear-gradient(135deg, oklch(0.93 0.16 95), oklch(0.82 0.17 70), oklch(0.95 0.12 100)); border-color: oklch(0.68 0.16 70);
+    box-shadow: 0 0 40px oklch(0.85 0.18 85 / 0.9), 0 14px 30px -10px oklch(0.3 0.12 60 / 0.4); animation: glow 1.5s ease-in-out infinite alternate; }
+  .r-legendary::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      radial-gradient(circle, oklch(1 0.05 100) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle, oklch(1 0.05 100 / 0.8) 0 1px, transparent 1.8px);
+    background-size: 46px 46px, 70px 70px;
+    background-position: 0 0, 20px 30px;
+    opacity: 0.8; animation: sparkle 2.6s linear infinite; }
+  .card-pop { animation: pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1); }
 }
 @keyframes bob { 50% { transform: translateY(-10px) rotate(-2deg); } }
 @keyframes shake { 0%,100%{transform:none} 20%{transform:rotate(-6deg)} 40%{transform:rotate(6deg) scale(1.05)} 60%{transform:rotate(-8deg)} 80%{transform:scale(1.2);opacity:.6} 100%{transform:scale(1.4);opacity:0} }
-@keyframes pop { from { transform: rotateY(90deg) scale(.6); opacity:0 } to { transform:none; opacity:1 } }
+@keyframes pop { from { transform: rotateY(90deg) scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes glow { to { filter: brightness(1.15) saturate(1.2); } }
+@keyframes sheen { to { background-position: 220% center; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes breathe { 50% { transform: scale(1.12); opacity: 0.85; } }
+@keyframes drift { from { transform: translateX(-35vw); } to { transform: translateX(115vw); } }
+@keyframes flutter { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(112vh) rotate(340deg); } }
+@keyframes sweep { 0% { transform: translateX(-80%); } 55%, 100% { transform: translateX(80%); } }
+@keyframes holo { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@keyframes sparkle { to { background-position: 46px 46px, 90px 100px; } }
