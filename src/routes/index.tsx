@@ -183,6 +183,18 @@ export function Index() {
           ))}
         </div>
       </section>
+
+      {signedOut && authOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl border-2 border-border bg-card p-6 text-center shadow-2xl">
+            <div className="text-5xl">🐔</div>
+            <h2 className="font-display mt-2 text-2xl text-primary">Log in to rip packs</h2>
+            <p className="mt-1 mb-4 text-sm text-muted-foreground">Create a name and password so your chickens save to your account.</p>
+            <AuthForm onDone={() => setAuthOpen(false)} />
+            <button onClick={() => setAuthOpen(false)} className="mt-3 text-xs text-muted-foreground underline">Maybe later</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
