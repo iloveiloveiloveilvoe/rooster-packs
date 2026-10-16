@@ -44,20 +44,11 @@ function roll(): Card {
 
 const toEmail = (name: string) => `${name.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "")}@cluckpacks.app`;
 
-function AuthBar({ user, username }: { user: User | null; username: string }) {
+function AuthForm({ onDone }: { onDone?: () => void }) {
   const [name, setName] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-
-  if (user) {
-    return (
-      <div className="flex items-center justify-center gap-3 font-bold">
-        <span>🐔 Signed in as {username}</span>
-        <button onClick={() => supabase.auth.signOut()} className="rounded-full border-2 border-border px-3 py-1 text-sm">Log out</button>
-      </div>
-    );
-  }
 
   const go = async (mode: "in" | "up") => {
     setErr("");
@@ -71,6 +62,7 @@ function AuthBar({ user, username }: { user: User | null; username: string }) {
       : await supabase.auth.signInWithPassword({ email, password: pw });
     setBusy(false);
     if (error) setErr(mode === "up" && /registered/i.test(error.message) ? "That name is taken" : mode === "in" ? "Wrong name or password" : error.message);
+    else onDone?.();
   };
 
   return (
@@ -86,6 +78,18 @@ function AuthBar({ user, username }: { user: User | null; username: string }) {
   );
 }
 
+function AuthBar({ user, username }: { user: User | null; username: string }) {
+  if (user) {
+    return (
+      <div className="flex items-center justify-center gap-3 font-bold">
+        <span>🐔 Signed in as {username}</span>
+        <button onClick={() => supabase.auth.signOut()} className="rounded-full border-2 border-border px-3 py-1 text-sm">Log out</button>
+      </div>
+    );
+  }
+  return <AuthForm />;
+}
+
 export function Index() {
   const [pack, setPack] = useState<Card[] | null>(null);
   const [revealed, setRevealed] = useState(0);
@@ -95,6 +99,8 @@ export function Index() {
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [authOpen, setAuthOpen] = useState(true);
+  const signedOut = loaded && !user;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
@@ -150,10 +156,10 @@ export function Index() {
                 {pack!.map((c, i) => <TCard key={i} c={c} small />)}
               </div>
             )}
-            <button onClick={rip} disabled={ripping} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
+            <button onClick={rip} disabled={ripping || signedOut} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
               <span className="text-6xl">🐔</span>
               <span className="font-display text-2xl mt-2">CLUCK PACK</span>
-              <span className="text-xs font-bold opacity-80">5 cards · tap to rip</span>
+              <span className="text-xs font-bold opacity-80">{signedOut ? "🔒 log in to rip" : "5 cards · tap to rip"}</span>
             </button>
           </>
         ) : (
@@ -177,6 +183,18 @@ export function Index() {
           ))}
         </div>
       </section>
+
+      {signedOut && authOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl border-2 border-border bg-card p-6 text-center shadow-2xl">
+            <div className="text-5xl">🐔</div>
+            <h2 className="font-display mt-2 text-2xl text-primary">Log in to rip packs</h2>
+            <p className="mt-1 mb-4 text-sm text-muted-foreground">Create a name and password so your chickens save to your account.</p>
+            <AuthForm onDone={() => setAuthOpen(false)} />
+            <button onClick={() => setAuthOpen(false)} className="mt-3 text-xs text-muted-foreground underline">Maybe later</button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
