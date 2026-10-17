@@ -18,16 +18,19 @@ export type Database = {
         Row: {
           banned: boolean
           kicked_at: string | null
+          kicked_sessions: string[]
           user_id: string
         }
         Insert: {
           banned?: boolean
           kicked_at?: string | null
+          kicked_sessions?: string[]
           user_id: string
         }
         Update: {
           banned?: boolean
           kicked_at?: string | null
+          kicked_sessions?: string[]
           user_id?: string
         }
         Relationships: [
