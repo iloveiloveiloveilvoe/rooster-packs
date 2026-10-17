@@ -14,6 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      player_access: {
+        Row: {
+          banned: boolean
+          kicked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          banned?: boolean
+          kicked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          banned?: boolean
+          kicked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           coins: number
@@ -41,15 +67,61 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_players: {
+        Args: never
+        Returns: {
+          banned: boolean
+          coins: number
+          id: string
+          username: string
+        }[]
+      }
+      coins_leaderboard: {
+        Args: never
+        Returns: {
+          coins: number
+          username: string
+        }[]
+      }
+      game_access: { Args: never; Returns: Json }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      moderate_player: {
+        Args: { action: string; target: string }
+        Returns: undefined
+      }
+      player_is_active: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -176,6 +248,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

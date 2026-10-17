@@ -15,6 +15,13 @@
       "when": 1792168353987,
       "tag": "0001_add_coins",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792219656291,
+      "tag": "0002_player_moderation_leaderboard",
+      "breakpoints": true
     }
   ]
 }
