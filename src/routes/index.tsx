@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { AdminPanel, Leaderboard, usePlayerAccess } from "@/components/player-panels";
+import { FREE_PACK, drawPack } from "@/lib/pack-rules";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,6 +43,7 @@ const SELL: Record<Rarity, number> = { common: 5, rare: 15, epic: 40, legendary:
 type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
 // odds = [legendary, epic, rare] cumulative thresholds; rest is common
 const PACKS: PackType[] = [
+  FREE_PACK,
   { id: "cluck", name: "Cluck Pack", emoji: "🐔", cost: 50, cards: 5, odds: [0.03, 0.13, 0.38], blurb: "The classic. 5 cards." },
   { id: "golden", name: "Golden Pack", emoji: "🌟", cost: 120, cards: 5, odds: [0.08, 0.28, 0.6], blurb: "Better odds for shiny pulls." },
   { id: "mega", name: "Mega Coop Pack", emoji: "🏆", cost: 250, cards: 10, odds: [0.1, 0.35, 0.7], blurb: "10 cards, fat odds, big coop energy." },
@@ -49,7 +53,9 @@ function roll(odds: [number, number, number]): Card {
   const r = Math.random();
   const rar: Rarity = r < odds[0] ? "legendary" : r < odds[1] ? "epic" : r < odds[2] ? "rare" : "common";
   const pool = CARDS.filter((c) => c.rarity === rar);
-  return pool[Math.floor(Math.random() * pool.length)]!;
+  const card = pool[Math.floor(Math.random() * pool.length)];
+  if (!card) throw new Error("No cards in rarity pool");
+  return card;
 }
 
 const toEmail = (name: string) => `${name.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "")}@cluckpacks.app`;
@@ -80,8 +86,8 @@ function AuthForm({ onDone }: { onDone?: () => void }) {
       <div className="flex flex-wrap justify-center gap-2">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-36 rounded-xl border-2 border-border bg-background/70 px-4 py-2 font-bold outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30" />
         <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder="Password" className="w-36 rounded-xl border-2 border-border bg-background/70 px-4 py-2 font-bold outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/30" />
-        <button disabled={busy} onClick={() => go("in")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Log in</button>
-        <button disabled={busy} onClick={() => go("up")} className="rounded-full border-2 border-primary px-5 py-2 font-bold text-primary transition-transform hover:scale-105 active:scale-95">Sign up</button>
+        <Button variant="ghost" disabled={busy} onClick={() => go("in")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Log in</Button>
+        <Button variant="ghost" disabled={busy} onClick={() => go("up")} className="rounded-full border-2 border-primary px-5 py-2 font-bold text-primary transition-transform hover:scale-105 active:scale-95">Sign up</Button>
       </div>
       <p className="text-xs text-muted-foreground">{err || "Log in to save your chickens to your account"}</p>
     </div>
@@ -110,7 +116,7 @@ function TitlePage({ loading }: { loading?: boolean }) {
   );
 }
 
-type Tab = "shop" | "rip" | "coop";
+type Tab = "shop" | "rip" | "coop" | "leaderboard";
 
 export function Index() {
   const [tab, setTab] = useState<Tab>("shop");
@@ -125,6 +131,14 @@ export function Index() {
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast] = useState("");
   const signedOut = loaded && !user;
+  const access = usePlayerAccess(user?.id);
+  useEffect(() => {
+    if (user && access.data && !access.data.active) {
+      setPack(null);
+      setToast(access.data.banned ? "Your account has been banned." : "You were kicked. Log in again to return.");
+      void supabase.auth.signOut();
+    }
+  }, [user, access.data]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
@@ -147,10 +161,10 @@ export function Index() {
   }, [user]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || (user && !access.data?.active)) return;
     if (user) supabase.from("profiles").update({ owned, opened, coins, updated_at: new Date().toISOString() }).eq("id", user.id).then();
     else localStorage.setItem("cluck", JSON.stringify({ owned, opened, coins }));
-  }, [owned, opened, coins, loaded, user]);
+  }, [owned, opened, coins, loaded, user, access.data?.active]);
 
   useEffect(() => {
     if (!toast) return;
@@ -159,13 +173,14 @@ export function Index() {
   }, [toast]);
 
   const buy = (p: PackType) => {
+    if (ripping || !user || !access.data?.active) return;
     if (coins < p.cost) return setToast("Not enough coins — sell some cards!");
     setCoins((c) => c - p.cost);
     setRipping(true);
     setTab("rip");
     setPack(null);
     setTimeout(() => {
-      const cards = Array.from({ length: p.cards }, () => roll(p.odds)).sort((a, b) => order(a) - order(b));
+      const cards = drawPack(p.cards, () => roll(p.odds));
       setPack({ cards, type: p }); setRevealed(0); setRipping(false); setOpened((o) => o + 1);
       setOwned((o) => { const n = { ...o }; cards.forEach((c) => (n[c.id] = (n[c.id] || 0) + 1)); return n; });
     }, 700);
@@ -173,7 +188,7 @@ export function Index() {
 
   const sell = (c: Card) => {
     if (!owned[c.id]) return;
-    setOwned((o) => { const n = { ...o }; n[c.id]!--; if (!n[c.id]) delete n[c.id]; return n; });
+    setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 1) - 1; if (!n[c.id]) delete n[c.id]; return n; });
     setCoins((v) => v + SELL[c.rarity]);
     setToast(`Sold ${c.name} for ${SELL[c.rarity]} coins 🪙`);
   };
@@ -181,10 +196,13 @@ export function Index() {
   const done = pack && revealed >= pack.cards.length;
   const count = Object.keys(owned).length;
   if (!loaded) return <TitlePage loading />;
-  if (signedOut) return <TitlePage />;
+  if (signedOut) return <><TitlePage />{toast && <p role="alert" className="fixed bottom-4 left-4 right-4 bg-card p-3 text-center font-bold text-destructive">{toast}</p>}</>;
+  if (user && access.isPending) return <TitlePage loading />;
+  if (user && (access.isError || !access.data?.active)) return <main className="farm-bg flex min-h-screen flex-col items-center justify-center gap-4"><p role="alert">{access.data?.banned ? "Your account has been banned." : "Checking your access failed. Please try again."}</p><Button onClick={() => access.refetch()}>Try again</Button><Button variant="outline" onClick={() => supabase.auth.signOut()}>Log out</Button></main>;
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-8 farm-bg">
+      {user && <AdminPanel key={user.id} userId={user.id} isAdmin={access.data?.admin ?? false} />}
       <div className="sunburst" aria-hidden />
       <div className="sun-disc" aria-hidden />
       <div className="cloud h-7 w-28" style={{ top: "12%", left: "-15%", animationDuration: "60s" }} aria-hidden />
@@ -196,15 +214,15 @@ export function Index() {
         {user && (
           <p className="mt-1 text-sm font-bold text-muted-foreground">
             🐔 {username} ·{" "}
-            <button onClick={() => supabase.auth.signOut()} className="underline">Log out</button>
+            <Button variant="ghost" onClick={() => supabase.auth.signOut()} className="underline">Log out</Button>
           </p>
         )}
-        <nav className="mt-4 inline-flex rounded-full border-2 border-border bg-card/80 p-1 shadow-lg backdrop-blur">
-          {([["shop", "🛒 Pack Shop"], ["rip", "📦 Rip Zone"], ["coop", "🐔 Your Coop"]] as [Tab, string][]).map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)}
+        <nav className="mt-4 inline-flex max-w-full flex-wrap justify-center rounded-full border-2 border-border bg-card/80 p-1 shadow-lg backdrop-blur">
+          {([["shop", "🛒 Pack Shop"], ["rip", "📦 Rip Zone"], ["coop", "🐔 Your Coop"], ["leaderboard", "🏆 Leaderboard"]] as [Tab, string][]).map(([t, label]) => (
+            <Button variant="ghost" key={t} onClick={() => setTab(t)}
               className={`rounded-full px-4 py-1.5 text-sm font-black transition-all ${tab === t ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
               {label}
-            </button>
+            </Button>
           ))}
         </nav>
         {toast && <p className="mt-3 inline-block rounded-full bg-primary px-4 py-1 text-sm font-bold text-primary-foreground shadow-lg">{toast}</p>}
@@ -214,16 +232,16 @@ export function Index() {
         <section className="mx-auto max-w-4xl">
           <h2 className="font-display text-3xl golden-title mb-1 text-center">Pick your pack</h2>
           <p className="mb-6 text-center text-sm font-bold text-muted-foreground">Buy here, then rip in the Rip Zone. Sell cards in Your Coop to earn coins.</p>
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {PACKS.map((p) => (
               <div key={p.id} className="flex flex-col items-center rounded-2xl border-2 border-border bg-card/90 p-5 shadow-xl backdrop-blur">
-                <button onClick={() => buy(p)} disabled={ripping} className={`pack ${ripping ? "pack-rip" : "pack-idle"}`}>
+                <Button variant="ghost" onClick={() => buy(p)} disabled={ripping} aria-label={`Open ${p.name}`} className={`pack max-w-full whitespace-normal ${ripping ? "pack-rip" : "pack-idle"}`}>
                   <span className="text-6xl">{p.emoji}</span>
                   <span className="font-display text-xl mt-2">{p.name.toUpperCase()}</span>
                   <span className="text-xs font-bold opacity-80">{p.cards} cards · tap to buy & rip</span>
-                </button>
+                </Button>
                 <p className="mt-3 text-center text-xs font-bold text-muted-foreground">{p.blurb}</p>
-                <p className={`mt-1 font-black ${coins >= p.cost ? "text-foreground" : "text-destructive"}`}>🪙 {p.cost}</p>
+                <p className={`mt-1 font-black ${coins >= p.cost ? "text-foreground" : "text-destructive"}`}>{p.cost === 0 ? "FREE" : `🪙 ${p.cost}`}</p>
               </div>
             ))}
           </div>
@@ -239,21 +257,21 @@ export function Index() {
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="text-7xl" style={{ animation: "bob 3s ease-in-out infinite" }}>📦</div>
               <p className="font-bold text-muted-foreground">Nothing to rip yet — grab a pack from the Pack Shop!</p>
-              <button onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Go to the shop</button>
+              <Button variant="ghost" onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Go to the shop</Button>
             </div>
           ) : done ? (
             <div className="flex flex-col items-center">
               <div className="flex flex-wrap justify-center gap-3 mb-6 max-w-4xl">
                 {pack.cards.map((c, i) => <TCard key={i} c={c} small />)}
               </div>
-              <button onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Buy another pack</button>
+              <Button variant="ghost" onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Buy another pack</Button>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
               <p className="font-black text-muted-foreground">{pack.type.name}</p>
-              <button onClick={() => setRevealed((r) => r + 1)} className="card-pop" key={revealed}>
-                <TCard c={pack.cards[revealed]!} />
-              </button>
+              <Button variant="ghost" onClick={() => setRevealed((r) => r + 1)} className="card-pop" key={revealed}>
+                {pack.cards[revealed] && <TCard c={pack.cards[revealed]} />}
+              </Button>
               <p className="font-bold text-muted-foreground">Tap card · {revealed + 1}/{pack.cards.length}</p>
             </div>
           )}
@@ -266,22 +284,22 @@ export function Index() {
           <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙5 · rare 🪙15 · epic 🪙40 · legendary 🪙150</p>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
             {CARDS.map((c) => owned[c.id] ? (
-              <button key={c.id} onClick={() => sell(c)} className="relative transition-transform hover:scale-105 active:scale-95" title={`Sell for ${SELL[c.rarity]} coins`}>
+              <Button variant="ghost" key={c.id} onClick={() => sell(c)} className="relative transition-transform hover:scale-105 active:scale-95" title={`Sell for ${SELL[c.rarity]} coins`}>
                 <TCard c={c} small />
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span>
                 <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-card border border-border px-2 text-[10px] font-black shadow">🪙{SELL[c.rarity]}</span>
-              </button>
+              </Button>
             ) : (
               <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
             ))}
           </div>
         </section>
       )}
+      {tab === "leaderboard" && user && <Leaderboard userId={user.id} />}
     </main>
   );
 }
 
-const order = (c: Card) => ["common", "rare", "epic", "legendary"].indexOf(c.rarity);
 
 function TCard({ c, small }: { c: Card; small?: boolean }) {
   return (
