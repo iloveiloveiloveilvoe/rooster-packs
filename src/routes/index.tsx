@@ -229,17 +229,17 @@ export function Index() {
       </header>
 
       {tab === "shop" && (
-        <section className="mx-auto max-w-4xl">
+        <section className="mx-auto max-w-6xl">
           <h2 className="font-display text-3xl golden-title mb-1 text-center">Pick your pack</h2>
           <p className="mb-6 text-center text-sm font-bold text-muted-foreground">Buy here, then rip in the Rip Zone. Sell cards in Your Coop to earn coins.</p>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mx-auto max-w-6xl">
             {PACKS.map((p) => (
               <div key={p.id} className="flex flex-col items-center rounded-2xl border-2 border-border bg-card/90 p-5 shadow-xl backdrop-blur">
-                <Button variant="ghost" onClick={() => buy(p)} disabled={ripping} aria-label={`Open ${p.name}`} className={`pack max-w-full whitespace-normal ${ripping ? "pack-rip" : "pack-idle"}`}>
+                <button type="button" onClick={() => buy(p)} disabled={ripping} aria-label={`Open ${p.name}`} className={`pack cursor-pointer max-w-full whitespace-normal ${ripping ? "pack-rip" : "pack-idle"}`}>
                   <span className="text-6xl">{p.emoji}</span>
                   <span className="font-display text-xl mt-2">{p.name.toUpperCase()}</span>
                   <span className="text-xs font-bold opacity-80">{p.cards} cards · tap to buy & rip</span>
-                </Button>
+                </button>
                 <p className="mt-3 text-center text-xs font-bold text-muted-foreground">{p.blurb}</p>
                 <p className={`mt-1 font-black ${coins >= p.cost ? "text-foreground" : "text-destructive"}`}>{p.cost === 0 ? "FREE" : `🪙 ${p.cost}`}</p>
               </div>
@@ -269,9 +269,9 @@ export function Index() {
           ) : (
             <div className="flex flex-col items-center gap-4">
               <p className="font-black text-muted-foreground">{pack.type.name}</p>
-              <Button variant="ghost" onClick={() => setRevealed((r) => r + 1)} className="card-pop" key={revealed}>
+              <button type="button" onClick={() => setRevealed((r) => r + 1)} className="card-pop cursor-pointer rounded-none border-0 bg-transparent p-0" key={revealed}>
                 {pack.cards[revealed] && <TCard c={pack.cards[revealed]} />}
-              </Button>
+              </button>
               <p className="font-bold text-muted-foreground">Tap card · {revealed + 1}/{pack.cards.length}</p>
             </div>
           )}
@@ -284,11 +284,11 @@ export function Index() {
           <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙5 · rare 🪙15 · epic 🪙40 · legendary 🪙150</p>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
             {CARDS.map((c) => owned[c.id] ? (
-              <Button variant="ghost" key={c.id} onClick={() => sell(c)} className="relative transition-transform hover:scale-105 active:scale-95" title={`Sell for ${SELL[c.rarity]} coins`}>
+              <button type="button" key={c.id} onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
                 <TCard c={c} small />
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span>
                 <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-card border border-border px-2 text-[10px] font-black shadow">🪙{SELL[c.rarity]}</span>
-              </Button>
+              </button>
             ) : (
               <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
             ))}
