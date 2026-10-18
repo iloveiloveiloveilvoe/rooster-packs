@@ -229,7 +229,7 @@ export function Index() {
       </header>
 
       {tab === "shop" && (
-        <section className="mx-auto max-w-4xl">
+        <section className="mx-auto max-w-6xl">
           <h2 className="font-display text-3xl golden-title mb-1 text-center">Pick your pack</h2>
           <p className="mb-6 text-center text-sm font-bold text-muted-foreground">Buy here, then rip in the Rip Zone. Sell cards in Your Coop to earn coins.</p>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mx-auto max-w-6xl">
