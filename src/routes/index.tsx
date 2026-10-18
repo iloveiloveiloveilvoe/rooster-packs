@@ -262,7 +262,7 @@ export function Index() {
           ) : done ? (
             <div className="flex flex-col items-center">
               <div className="flex flex-wrap justify-center gap-3 mb-6 max-w-4xl">
-                {pack.cards.map((c, i) => <TCard key={i} c={c} small />)}
+                {pack.cards.map((c, i) => <div key={i} className="w-44"><TCard c={c} small /></div>)}
               </div>
               <Button variant="ghost" onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Buy another pack</Button>
             </div>
@@ -282,7 +282,7 @@ export function Index() {
         <section className="max-w-5xl mx-auto">
           <h2 className="font-display text-3xl golden-title mb-1">Your Coop</h2>
           <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙5 · rare 🪙15 · epic 🪙40 · legendary 🪙150</p>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-5">
             {CARDS.map((c) => owned[c.id] ? (
               <button type="button" key={c.id} onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
                 <TCard c={c} small />
@@ -303,9 +303,9 @@ export function Index() {
 
 function TCard({ c, small }: { c: Card; small?: boolean }) {
   return (
-    <div className={`tcard r-${c.rarity} ${small ? "w-24 text-[8px]" : "w-64 text-sm"}`}>
+    <div className={`tcard r-${c.rarity} ${small ? "w-full text-[11px]" : "w-64 text-sm"}`}>
       <div className="flex justify-between font-bold"><span className="truncate">{c.name}</span><span>{c.hp}HP</span></div>
-      <div className="tcard-art"><span className={small ? "text-3xl" : "text-8xl"}>{c.emoji}</span></div>
+      <div className="tcard-art"><span className={small ? "text-6xl" : "text-8xl"}>{c.emoji}</span></div>
       {!small && <div className="text-xs font-bold opacity-80">{c.type} type</div>}
       <div className="tcard-move">{c.move}</div>
       <div className="uppercase font-black tracking-widest text-center">{c.rarity}</div>
