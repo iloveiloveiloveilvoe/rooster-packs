@@ -262,7 +262,7 @@ export function Index() {
           ) : done ? (
             <div className="flex flex-col items-center">
               <div className="flex flex-wrap justify-center gap-3 mb-6 max-w-4xl">
-                {pack.cards.map((c, i) => <TCard key={i} c={c} small />)}
+                {pack.cards.map((c, i) => <div key={i} className="w-44"><TCard c={c} small /></div>)}
               </div>
               <Button variant="ghost" onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Buy another pack</Button>
             </div>
@@ -303,7 +303,7 @@ export function Index() {
 
 function TCard({ c, small }: { c: Card; small?: boolean }) {
   return (
-    <div className={`tcard r-${c.rarity} ${small ? "w-44 text-[11px]" : "w-64 text-sm"}`}>
+    <div className={`tcard r-${c.rarity} ${small ? "w-full text-[11px]" : "w-64 text-sm"}`}>
       <div className="flex justify-between font-bold"><span className="truncate">{c.name}</span><span>{c.hp}HP</span></div>
       <div className="tcard-art"><span className={small ? "text-6xl" : "text-8xl"}>{c.emoji}</span></div>
       {!small && <div className="text-xs font-bold opacity-80">{c.type} type</div>}
