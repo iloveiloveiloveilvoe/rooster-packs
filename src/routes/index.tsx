@@ -56,6 +56,7 @@ const CARDS: Card[] = [
 ];
 
 const SELL: Record<Rarity, number> = { common: 10, rare: 30, epic: 75, legendary: 250, ultra: 1000 };
+const NEXT: Partial<Record<Rarity, Rarity>> = { common: "rare", rare: "epic", epic: "legendary", legendary: "ultra" };
 
 type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
 // odds = [legendary, epic, rare] cumulative thresholds; rest is common
