@@ -56,6 +56,7 @@ const CARDS: Card[] = [
 ];
 
 const SELL: Record<Rarity, number> = { common: 10, rare: 30, epic: 75, legendary: 250, ultra: 1000 };
+const NEXT: Partial<Record<Rarity, Rarity>> = { common: "rare", rare: "epic", epic: "legendary", legendary: "ultra" };
 
 type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
 // odds = [legendary, epic, rare] cumulative thresholds; rest is common
@@ -203,6 +204,16 @@ export function Index() {
     }, 700);
   };
 
+  const combine = (c: Card) => {
+    const next = NEXT[c.rarity];
+    if (!next || (owned[c.id] ?? 0) < 3) return;
+    const pool = CARDS.filter((x) => x.rarity === next);
+    const got = pool[Math.floor(Math.random() * pool.length)];
+    if (!got) return;
+    setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 0) - 3; if (n[c.id]! <= 0) delete n[c.id]; n[got.id] = (n[got.id] || 0) + 1; return n; });
+    setToast(`Combined 3 ${c.name} into ${got.name}! ✨`);
+  };
+
   const sell = (c: Card) => {
     if (!owned[c.id]) return;
     setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 1) - 1; if (!n[c.id]) delete n[c.id]; return n; });
@@ -298,14 +309,17 @@ export function Index() {
       {tab === "coop" && (
         <section className="max-w-5xl mx-auto">
           <h2 className="font-display text-3xl golden-title mb-1">Your Coop</h2>
-          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000</p>
+          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000. Have 3 of a card? Combine them into a random card of the next rarity!</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-5">
             {CARDS.map((c) => owned[c.id] ? (
-              <button type="button" key={c.id} onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
+              <div key={c.id} className="flex flex-col gap-3">
+              <button type="button" onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
                 <TCard c={c} small />
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span>
                 <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-card border border-border px-2 text-[10px] font-black shadow">🪙{SELL[c.rarity]}</span>
               </button>
+              {NEXT[c.rarity] && <Button size="sm" disabled={(owned[c.id] ?? 0) < 3} onClick={() => combine(c)} className="rounded-full font-black">⚗️ Combine 3 → {NEXT[c.rarity]}</Button>}
+              </div>
             ) : (
               <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
             ))}
