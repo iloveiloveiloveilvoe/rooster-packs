@@ -57,6 +57,7 @@ const CARDS: Card[] = [
 
 const SELL: Record<Rarity, number> = { common: 10, rare: 30, epic: 75, legendary: 250, ultra: 1000 };
 const NEXT: Partial<Record<Rarity, Rarity>> = { common: "rare", rare: "epic", epic: "legendary", legendary: "ultra" };
+const RARITY_ORDER: Rarity[] = ["common", "rare", "epic", "legendary", "ultra"];
 
 type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
 // odds = [legendary, epic, rare] cumulative thresholds; rest is common
@@ -134,7 +135,7 @@ function TitlePage({ loading }: { loading?: boolean }) {
   );
 }
 
-type Tab = "shop" | "rip" | "coop" | "leaderboard";
+type Tab = "shop" | "rip" | "coop" | "combine" | "leaderboard";
 
 export function Index() {
   const [tab, setTab] = useState<Tab>("shop");
@@ -223,6 +224,9 @@ export function Index() {
 
   const done = pack && revealed >= pack.cards.length;
   const count = Object.keys(owned).length;
+  const combos = CARDS
+    .filter((c) => NEXT[c.rarity] && (owned[c.id] ?? 0) > 0)
+    .sort((a, b) => (((owned[b.id] ?? 0) >= 3 ? 1 : 0) - ((owned[a.id] ?? 0) >= 3 ? 1 : 0)) || RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity));
   if (!loaded) return <TitlePage loading />;
   if (signedOut) return <><TitlePage />{toast && <p role="alert" className="fixed bottom-4 left-4 right-4 bg-card p-3 text-center font-bold text-destructive">{toast}</p>}</>;
   if (user && access.isPending) return <TitlePage loading />;
@@ -246,7 +250,7 @@ export function Index() {
           </p>
         )}
         <nav className="mt-4 inline-flex max-w-full flex-wrap justify-center rounded-full border-2 border-border bg-card/80 p-1 shadow-lg backdrop-blur">
-          {([["shop", "🛒 Pack Shop"], ["rip", "📦 Rip Zone"], ["coop", "🐔 Your Coop"], ["leaderboard", "🏆 Leaderboard"]] as [Tab, string][]).map(([t, label]) => (
+          {([["shop", "🛒 Pack Shop"], ["rip", "📦 Rip Zone"], ["coop", "🐔 Your Coop"], ["combine", "⚗️ Combine Lab"], ["leaderboard", "🏆 Leaderboard"]] as [Tab, string][]).map(([t, label]) => (
             <Button variant="ghost" key={t} onClick={() => setTab(t)}
               className={`rounded-full px-4 py-1.5 text-sm font-black transition-all ${tab === t ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"}`}>
               {label}
@@ -259,7 +263,7 @@ export function Index() {
       {tab === "shop" && (
         <section className="mx-auto max-w-6xl">
           <h2 className="font-display text-3xl golden-title mb-1 text-center">Pick your pack</h2>
-          <p className="mb-6 text-center text-sm font-bold text-muted-foreground">Buy here, then rip in the Rip Zone. Sell cards in Your Coop to earn coins.</p>
+          <p className="mb-6 text-center text-sm font-bold text-muted-foreground">Buy here, then rip in the Rip Zone. Sell cards in Your Coop and combine duplicates in the Combine Lab.</p>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mx-auto max-w-6xl">
             {PACKS.map((p) => (
               <div key={p.id} className="flex flex-col items-center rounded-2xl border-2 border-border bg-card/90 p-5 shadow-xl backdrop-blur">
