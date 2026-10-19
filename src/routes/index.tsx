@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AdminPanel, Leaderboard, usePlayerAccess } from "@/components/player-panels";
 import { FREE_PACK, drawPack } from "@/lib/pack-rules";
+import { BREED_IMAGES } from "@/assets/breeds";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -320,7 +321,7 @@ function TCard({ c, small }: { c: Card; small?: boolean }) {
   return (
     <div className={`tcard r-${c.rarity} ${small ? "w-full text-[11px]" : "w-64 text-sm"}`}>
       <div className="flex justify-between font-bold"><span className="truncate">{c.name}</span><span>{c.hp}HP</span></div>
-      <div className="tcard-art"><span className={small ? "text-6xl" : "text-8xl"}>{c.emoji}</span></div>
+      <div className="tcard-art overflow-hidden">{BREED_IMAGES[c.id] ? <img src={BREED_IMAGES[c.id]} alt={c.name} className="h-full w-full object-cover" loading="lazy" /> : <span className={small ? "text-6xl" : "text-8xl"}>{c.emoji}</span>}</div>
       {!small && <div className="text-xs font-bold opacity-80">{c.type} type</div>}
       <div className="tcard-move">{c.move}</div>
       <div className="uppercase font-black tracking-widest text-center">{c.rarity}</div>
