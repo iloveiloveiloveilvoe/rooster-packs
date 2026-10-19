@@ -1,3 +1,4 @@
+import b28 from "./28.jpg.asset.json";
 import b13 from "./13.jpg.asset.json";
 import b14 from "./14.jpg.asset.json";
 import b15 from "./15.jpg.asset.json";
@@ -29,4 +30,5 @@ export const BREED_IMAGES: Record<number, string> = {
   25: b25.url,
   26: b26.url,
   27: b27.url,
+  28: b28.url,
 };

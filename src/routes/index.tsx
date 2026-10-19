@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Rarity = "common" | "rare" | "epic" | "legendary";
+type Rarity = "common" | "rare" | "epic" | "legendary" | "ultra";
 type Card = { id: number; name: string; emoji: string; type: string; hp: number; move: string; rarity: Rarity };
 
 const CARDS: Card[] = [
@@ -52,9 +52,10 @@ const CARDS: Card[] = [
   { id: 25, name: "Araucana", emoji: "🩵", type: "Egg", hp: 90, move: "Tufted Fury — 48", rarity: "epic" },
   { id: 26, name: "Cream Legbar", emoji: "🥚", type: "Mythic", hp: 140, move: "Sky Egg Storm — 90", rarity: "legendary" },
   { id: 27, name: "Isbar", emoji: "✨", type: "Mythic", hp: 160, move: "Splash Nova — 110", rarity: "legendary" },
+  { id: 28, name: "Cheeky Boy", emoji: "👶", type: "Ultra", hp: 999, move: "Cheek Puff — 500", rarity: "ultra" },
 ];
 
-const SELL: Record<Rarity, number> = { common: 5, rare: 15, epic: 40, legendary: 150 };
+const SELL: Record<Rarity, number> = { common: 10, rare: 30, epic: 75, legendary: 250, ultra: 1000 };
 
 type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
 // odds = [legendary, epic, rare] cumulative thresholds; rest is common
@@ -67,7 +68,7 @@ const PACKS: PackType[] = [
 
 function roll(odds: [number, number, number]): Card {
   const r = Math.random();
-  const rar: Rarity = r < odds[0] ? "legendary" : r < odds[1] ? "epic" : r < odds[2] ? "rare" : "common";
+  const rar: Rarity = Math.random() < 0.005 ? "ultra" : r < odds[0] ? "legendary" : r < odds[1] ? "epic" : r < odds[2] ? "rare" : "common";
   const pool = CARDS.filter((c) => c.rarity === rar);
   const card = pool[Math.floor(Math.random() * pool.length)];
   if (!card) throw new Error("No cards in rarity pool");
@@ -297,7 +298,7 @@ export function Index() {
       {tab === "coop" && (
         <section className="max-w-5xl mx-auto">
           <h2 className="font-display text-3xl golden-title mb-1">Your Coop</h2>
-          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙5 · rare 🪙15 · epic 🪙40 · legendary 🪙150</p>
+          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-5">
             {CARDS.map((c) => owned[c.id] ? (
               <button type="button" key={c.id} onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
