@@ -36,6 +36,21 @@ const CARDS: Card[] = [
   { id: 10, name: "Thunder Cockatrice", emoji: "⚡", type: "Storm", hp: 100, move: "Bolt Peck — 60", rarity: "epic" },
   { id: 11, name: "Golden Egg Layer", emoji: "🌟", type: "Mythic", hp: 150, move: "Midas Lay — 99", rarity: "legendary" },
   { id: 12, name: "Phoenix Cluck", emoji: "🔥", type: "Mythic", hp: 180, move: "Rebirth Blaze — 120", rarity: "legendary" },
+  { id: 13, name: "Barred Rock", emoji: "🐔", type: "Friendly", hp: 45, move: "Stripe Strike — 15", rarity: "common" },
+  { id: 14, name: "Orpington", emoji: "🐤", type: "Friendly", hp: 50, move: "Buff Hug — 12", rarity: "common" },
+  { id: 15, name: "Australorp", emoji: "🐦‍⬛", type: "Friendly", hp: 45, move: "Shadow Peck — 15", rarity: "common" },
+  { id: 16, name: "Speckled Sussex", emoji: "🐔", type: "Friendly", hp: 40, move: "Speckle Spray — 14", rarity: "common" },
+  { id: 17, name: "Welsummer", emoji: "🟤", type: "Egg", hp: 40, move: "Freckle Egg — 12", rarity: "common" },
+  { id: 18, name: "Cochin", emoji: "🪶", type: "Fluff", hp: 65, move: "Feather Boots — 25", rarity: "rare" },
+  { id: 19, name: "Faverolles", emoji: "🧔", type: "Friendly", hp: 60, move: "Beard Bash — 22", rarity: "rare" },
+  { id: 20, name: "Silkie", emoji: "☁️", type: "Fluff", hp: 55, move: "Cotton Cloud — 20", rarity: "rare" },
+  { id: 21, name: "Easter Egger", emoji: "🌈", type: "Egg", hp: 60, move: "Rainbow Lay — 28", rarity: "rare" },
+  { id: 22, name: "Olive Egger", emoji: "🫒", type: "Egg", hp: 60, move: "Olive Toss — 26", rarity: "rare" },
+  { id: 23, name: "Marans", emoji: "🍫", type: "Egg", hp: 85, move: "Chocolate Egg — 40", rarity: "epic" },
+  { id: 24, name: "Ameraucana", emoji: "💙", type: "Egg", hp: 85, move: "Blue Shell — 42", rarity: "epic" },
+  { id: 25, name: "Araucana", emoji: "🩵", type: "Egg", hp: 90, move: "Tufted Fury — 48", rarity: "epic" },
+  { id: 26, name: "Cream Legbar", emoji: "🥚", type: "Mythic", hp: 140, move: "Sky Egg Storm — 90", rarity: "legendary" },
+  { id: 27, name: "Isbar", emoji: "✨", type: "Mythic", hp: 160, move: "Splash Nova — 110", rarity: "legendary" },
 ];
 
 const SELL: Record<Rarity, number> = { common: 5, rare: 15, epic: 40, legendary: 150 };
