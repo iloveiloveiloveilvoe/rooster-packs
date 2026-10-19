@@ -309,21 +309,47 @@ export function Index() {
       {tab === "coop" && (
         <section className="max-w-5xl mx-auto">
           <h2 className="font-display text-3xl golden-title mb-1">Your Coop</h2>
-          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000. Have 3 of a card? Combine them into a random card of the next rarity!</p>
+          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-5">
             {CARDS.map((c) => owned[c.id] ? (
-              <div key={c.id} className="flex flex-col gap-3">
-              <button type="button" onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
+              <button key={c.id} type="button" onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
                 <TCard c={c} small />
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span>
                 <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-card border border-border px-2 text-[10px] font-black shadow">🪙{SELL[c.rarity]}</span>
               </button>
-              {NEXT[c.rarity] && <Button size="sm" disabled={(owned[c.id] ?? 0) < 3} onClick={() => combine(c)} className="rounded-full font-black">⚗️ Combine 3 → {NEXT[c.rarity]}</Button>}
-              </div>
             ) : (
               <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
             ))}
           </div>
+        </section>
+      )}
+
+      {tab === "combine" && (
+        <section className="max-w-5xl mx-auto">
+          <h2 className="font-display text-3xl golden-title mb-1">Combine Lab</h2>
+          <p className="mb-2 text-center text-sm font-bold text-muted-foreground">Trade in 3 copies of a card for 1 random card of the next rarity.</p>
+          <p className="mb-6 text-center text-xs font-black uppercase tracking-widest text-muted-foreground">common → rare → epic → legendary → ultra</p>
+          {combos.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="text-7xl" style={{ animation: "bob 3s ease-in-out infinite" }}>⚗️</div>
+              <p className="font-bold text-muted-foreground">Nothing to combine yet — rip packs until you hold 3 of the same card.</p>
+              <Button variant="ghost" onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Go to the shop</Button>
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {combos.map((c) => {
+                const have = owned[c.id] ?? 0;
+                const ready = have >= 3;
+                return (
+                  <div key={c.id} className="flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-card/90 p-5 shadow-xl backdrop-blur">
+                    <TCard c={c} small />
+                    <p className="text-xs font-black text-muted-foreground">{have}/3 copies · makes a random {NEXT[c.rarity]}</p>
+                    <Button size="sm" disabled={!ready} onClick={() => combine(c)} className={`rounded-full font-black ${ready ? "bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95" : ""}`}>{ready ? `⚗️ Combine 3 → ${NEXT[c.rarity]}` : `Need ${3 - have} more`}</Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
       {tab === "leaderboard" && user && <Leaderboard userId={user.id} />}
