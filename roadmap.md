@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Add Ooh La La Pack, uploaded card photos, original cards, and rarest-card tests; verify a signed-in rip.
+- [x] Add Ooh La La Pack, uploaded card photos, original cards, and rarest-card tests; verify a signed-in rip and saved collection.
 - [ ] Secure hidden admin panel and kick/ban enforcement for metcalf.
 - [ ] All-player coins leaderboard.
 - [ ] Free pack and unsorted random reveals.
