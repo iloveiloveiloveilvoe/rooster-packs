@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { AdminPanel, Leaderboard, usePlayerAccess } from "@/components/player-panels";
 import { FREE_PACK, drawPack } from "@/lib/pack-rules";
 import { BREED_IMAGES } from "@/assets/breeds";
+import { OOH_LA_LA_IMAGES } from "@/assets/ooh-la-la";
+import { OOH_LA_LA_CARDS, OOH_LA_LA_PACK, isStandardCard, rollOohLaLa } from "@/lib/ooh-la-la";
+
+const CARD_IMAGES = { ...BREED_IMAGES, ...OOH_LA_LA_IMAGES };
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -21,7 +25,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Rarity = "common" | "rare" | "epic" | "legendary" | "ultra";
+type Rarity = "common" | "rare" | "epic" | "legendary" | "ultra" | "mythic";
 type Card = { id: number; name: string; emoji: string; type: string; hp: number; move: string; rarity: Rarity };
 
 const CARDS: Card[] = [
@@ -53,11 +57,12 @@ const CARDS: Card[] = [
   { id: 26, name: "Cream Legbar", emoji: "🥚", type: "Mythic", hp: 140, move: "Sky Egg Storm — 90", rarity: "legendary" },
   { id: 27, name: "Isbar", emoji: "✨", type: "Mythic", hp: 160, move: "Splash Nova — 110", rarity: "legendary" },
   { id: 28, name: "Cheeky Boy", emoji: "👶", type: "Ultra", hp: 999, move: "Cheek Puff — 500", rarity: "ultra" },
+  ...OOH_LA_LA_CARDS,
 ];
 
-const SELL: Record<Rarity, number> = { common: 10, rare: 30, epic: 75, legendary: 250, ultra: 1000 };
+const SELL: Record<Rarity, number> = { common: 10, rare: 30, epic: 75, legendary: 250, ultra: 1000, mythic: 10000 };
 const NEXT: Partial<Record<Rarity, Rarity>> = { common: "rare", rare: "epic", epic: "legendary", legendary: "ultra" };
-const RARITY_ORDER: Rarity[] = ["common", "rare", "epic", "legendary", "ultra"];
+const RARITY_ORDER: Rarity[] = ["common", "rare", "epic", "legendary", "ultra", "mythic"];
 
 type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
 // odds = [legendary, epic, rare] cumulative thresholds; rest is common
@@ -66,12 +71,13 @@ const PACKS: PackType[] = [
   { id: "cluck", name: "Cluck Pack", emoji: "🐔", cost: 50, cards: 5, odds: [0.03, 0.13, 0.38], blurb: "The classic. 5 cards." },
   { id: "golden", name: "Golden Pack", emoji: "🌟", cost: 120, cards: 5, odds: [0.08, 0.28, 0.6], blurb: "Better odds for shiny pulls." },
   { id: "mega", name: "Mega Coop Pack", emoji: "🏆", cost: 250, cards: 10, odds: [0.1, 0.35, 0.7], blurb: "10 cards, fat odds, big coop energy." },
+  OOH_LA_LA_PACK,
 ];
 
 function roll(odds: [number, number, number]): Card {
   const r = Math.random();
   const rar: Rarity = Math.random() < 0.005 ? "ultra" : r < odds[0] ? "legendary" : r < odds[1] ? "epic" : r < odds[2] ? "rare" : "common";
-  const pool = CARDS.filter((c) => c.rarity === rar);
+  const pool = CARDS.filter((c) => c.rarity === rar && isStandardCard(c));
   const card = pool[Math.floor(Math.random() * pool.length)];
   if (!card) throw new Error("No cards in rarity pool");
   return card;
@@ -199,7 +205,7 @@ export function Index() {
     setTab("rip");
     setPack(null);
     setTimeout(() => {
-      const cards = drawPack(p.cards, () => roll(p.odds));
+      const cards = drawPack(p.cards, () => p.id === OOH_LA_LA_PACK.id ? rollOohLaLa() : roll(p.odds));
       setPack({ cards, type: p }); setRevealed(0); setRipping(false); setOpened((o) => o + 1);
       setOwned((o) => { const n = { ...o }; cards.forEach((c) => (n[c.id] = (n[c.id] || 0) + 1)); return n; });
     }, 700);
@@ -208,10 +214,10 @@ export function Index() {
   const combine = (c: Card) => {
     const next = NEXT[c.rarity];
     if (!next || (owned[c.id] ?? 0) < 3) return;
-    const pool = CARDS.filter((x) => x.rarity === next);
+    const pool = CARDS.filter((x) => x.rarity === next && isStandardCard(x));
     const got = pool[Math.floor(Math.random() * pool.length)];
     if (!got) return;
-    setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 0) - 3; if (n[c.id]! <= 0) delete n[c.id]; n[got.id] = (n[got.id] || 0) + 1; return n; });
+    setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 0) - 3; if ((n[c.id] ?? 0) <= 0) delete n[c.id]; n[got.id] = (n[got.id] || 0) + 1; return n; });
     setToast(`Combined 3 ${c.name} into ${got.name}! ✨`);
   };
 
@@ -267,15 +273,22 @@ export function Index() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mx-auto max-w-6xl">
             {PACKS.map((p) => (
               <div key={p.id} className="flex flex-col items-center rounded-2xl border-2 border-border bg-card/90 p-5 shadow-xl backdrop-blur">
-                <button type="button" onClick={() => buy(p)} disabled={ripping} aria-label={`Open ${p.name}`} className={`pack cursor-pointer max-w-full whitespace-normal ${ripping ? "pack-rip" : "pack-idle"}`}>
-                  <span className="text-6xl">{p.emoji}</span>
+                <Button variant="ghost" type="button" onClick={() => buy(p)} disabled={ripping} aria-label={`Open ${p.name}`} className={`pack h-72 w-52 flex-col px-4 py-4 cursor-pointer max-w-full whitespace-normal ${p.id === OOH_LA_LA_PACK.id ? "pack-ooh" : ""} ${ripping ? "pack-rip" : "pack-idle"}`}>
+                  {p.id === OOH_LA_LA_PACK.id ? <img src={OOH_LA_LA_IMAGES[31]} alt="Ooh La La" className="h-36 w-36 rounded-lg object-cover object-bottom" /> : <span className="text-6xl">{p.emoji}</span>}
                   <span className="font-display text-xl mt-2">{p.name.toUpperCase()}</span>
                   <span className="text-xs font-bold opacity-80">{p.cards} cards · tap to buy & rip</span>
-                </button>
+                </Button>
                 <p className="mt-3 text-center text-xs font-bold text-muted-foreground">{p.blurb}</p>
                 <p className={`mt-1 font-black ${coins >= p.cost ? "text-foreground" : "text-destructive"}`}>{p.cost === 0 ? "FREE" : `🪙 ${p.cost}`}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-10 border-t-2 border-border pt-6">
+            <h3 className="font-display text-3xl golden-title text-center">Ooh La La collection</h3>
+            <p className="mt-2 mb-5 text-center text-sm font-bold text-muted-foreground">Pack exclusive · Crown jewel: Ooh La La · 1 in 10,000 cards</p>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {OOH_LA_LA_CARDS.map((c) => <div key={c.id}><TCard c={c} small /></div>)}
+            </div>
           </div>
         </section>
       )}
@@ -313,7 +326,7 @@ export function Index() {
       {tab === "coop" && (
         <section className="max-w-5xl mx-auto">
           <h2 className="font-display text-3xl golden-title mb-1">Your Coop</h2>
-          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000.</p>
+          <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000 · mythic 🪙10000.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-5">
             {CARDS.map((c) => owned[c.id] ? (
               <button key={c.id} type="button" onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
@@ -365,8 +378,8 @@ export function Index() {
 function TCard({ c, small }: { c: Card; small?: boolean }) {
   return (
     <div className={`tcard r-${c.rarity} ${small ? "w-full text-[11px]" : "w-64 text-sm"}`}>
-      <div className="flex justify-between font-bold"><span className="truncate">{c.name}</span><span>{c.hp}HP</span></div>
-      <div className="tcard-art overflow-hidden">{BREED_IMAGES[c.id] ? <img src={BREED_IMAGES[c.id]} alt={c.name} className="h-full w-full object-cover" loading="lazy" /> : <span className={small ? "text-6xl" : "text-8xl"}>{c.emoji}</span>}</div>
+      <div className="flex items-start justify-between gap-1 font-bold"><span className="min-w-0">{c.name}</span><span className="shrink-0">{c.hp}HP</span></div>
+      <div className="tcard-art min-h-0 overflow-hidden">{CARD_IMAGES[c.id] ? <img src={CARD_IMAGES[c.id]} alt={c.name} className={`h-full w-full object-cover ${c.id >= 30 && c.id <= 32 ? "object-bottom" : ""}`} loading="lazy" /> : <span className={small ? "text-6xl" : "text-8xl"}>{c.emoji}</span>}</div>
       {!small && <div className="text-xs font-bold opacity-80">{c.type} type</div>}
       <div className="tcard-move">{c.move}</div>
       <div className="uppercase font-black tracking-widest text-center">{c.rarity}</div>

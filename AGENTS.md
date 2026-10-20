@@ -12,3 +12,4 @@
 - Keep moderation permissions in protected user_roles and enforce kick/ban status through database functions and restrictive profile RLS; the typed panel sequence only reveals UI, never grants permissions.
 - Expose the leaderboard through a signed-in RPC returning only names and coins; private collections remain owner-only.
 - Keep pack draw-order rules in a browser-safe module with unit tests; never sort reveals by rarity.
+- Keep exclusive-pack catalogs and weighted draws in browser-safe tested modules; exclude their cards from standard draw and combine reward pools so exclusive drop odds cannot be bypassed.
