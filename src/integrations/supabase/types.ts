@@ -45,6 +45,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          buffs: Json
           coins: number
           id: string
           opened: number
@@ -53,6 +54,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          buffs?: Json
           coins?: number
           id: string
           opened?: number
@@ -61,6 +63,7 @@ export type Database = {
           username: string
         }
         Update: {
+          buffs?: Json
           coins?: number
           id?: string
           opened?: number

@@ -10,7 +10,7 @@ describe("Ooh La La pack", () => {
   it("adds three original cards to a five-card pack", () => {
     expect(OOH_LA_LA_CARDS.filter((c) => c.id >= 33)).toHaveLength(3);
     expect(OOH_LA_LA_PACK.cards).toBe(5);
-    expect(OOH_LA_LA_PACK.cost).toBe(100);
+    expect(OOH_LA_LA_PACK.cost).toBe(1000);
   });
   it("makes the big-lipped chicken uniquely rarest at exactly one in ten thousand", () => {
     const crown = OOH_LA_LA_CARDS.find((c) => c.id === 31);

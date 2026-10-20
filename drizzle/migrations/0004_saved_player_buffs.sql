@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN buffs jsonb NOT NULL DEFAULT '[]'::jsonb;
