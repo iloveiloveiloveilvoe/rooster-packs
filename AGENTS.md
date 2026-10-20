@@ -13,3 +13,4 @@
 - Expose the leaderboard through a signed-in RPC returning only names and coins; private collections remain owner-only.
 - Keep pack draw-order rules in a browser-safe module with unit tests; never sort reveals by rarity.
 - Keep exclusive-pack catalogs and weighted draws in browser-safe tested modules; exclude their cards from standard draw and combine reward pools so exclusive drop odds cannot be bypassed.
+- Keep combine costs, reward eligibility, timed buff recipes and multiplier calculations in a browser-safe tested rules module; save active buffs with absolute expiry times in the owner-protected profile alongside consumed inventory.

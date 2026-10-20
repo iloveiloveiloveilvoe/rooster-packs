@@ -29,6 +29,13 @@
       "when": 1792219760489,
       "tag": "0003_kick_entire_player_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792456857825,
+      "tag": "0004_saved_player_buffs",
+      "breakpoints": true
     }
   ]
 }

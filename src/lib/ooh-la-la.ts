@@ -1,5 +1,5 @@
 export const OOH_LA_LA_PACK = {
-  id: "ooh-la-la", name: "Ooh La La Pack", emoji: "💋", cost: 100, cards: 5,
+  id: "ooh-la-la", name: "Ooh La La Pack", emoji: "💋", cost: 1000, cards: 5,
   odds: [0.04, 0.13, 0.28] as [number, number, number],
   blurb: "7 exclusive cards · Ooh La La: 0.01% per card",
 };

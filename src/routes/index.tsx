@@ -8,6 +8,8 @@ import { FREE_PACK, drawPack } from "@/lib/pack-rules";
 import { BREED_IMAGES } from "@/assets/breeds";
 import { OOH_LA_LA_IMAGES } from "@/assets/ooh-la-la";
 import { OOH_LA_LA_CARDS, OOH_LA_LA_PACK, isStandardCard, rollOohLaLa } from "@/lib/ooh-la-la";
+import { NEXT, COMBINE_COST, combinePool, buffRecipe, buffedCards, buffedSell, parseBuffs, type Buff, type BuffKind } from "@/lib/combine-rules";
+import { BuffLab, ActiveBuffs } from "@/components/buff-lab";
 
 const CARD_IMAGES = { ...BREED_IMAGES, ...OOH_LA_LA_IMAGES };
 
@@ -61,7 +63,6 @@ const CARDS: Card[] = [
 ];
 
 const SELL: Record<Rarity, number> = { common: 10, rare: 30, epic: 75, legendary: 250, ultra: 1000, mythic: 10000 };
-const NEXT: Partial<Record<Rarity, Rarity>> = { common: "rare", rare: "epic", epic: "legendary", legendary: "ultra" };
 const RARITY_ORDER: Rarity[] = ["common", "rare", "epic", "legendary", "ultra", "mythic"];
 
 type PackType = { id: string; name: string; emoji: string; cost: number; cards: number; odds: [number, number, number]; blurb: string };
@@ -155,6 +156,14 @@ export function Index() {
   const [username, setUsername] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast] = useState("");
+  const [labMode, setLabMode] = useState<"cards" | "buffs">("cards");
+  const [buffs, setBuffs] = useState<Buff[]>([]);
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const signedOut = loaded && !user;
   const access = usePlayerAccess(user?.id);
   useEffect(() => {
@@ -177,19 +186,20 @@ export function Index() {
       const s = localStorage.getItem("cluck");
       const d = s ? JSON.parse(s) : {};
       setOwned(d.owned || {}); setOpened(d.opened || 0); setCoins(d.coins ?? 100); setUsername(""); setLoaded(true);
+      setBuffs([]);
       return;
     }
-    supabase.from("profiles").select("username, owned, opened, coins").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) { setOwned((data.owned as Record<number, number>) || {}); setOpened(data.opened); setCoins(data.coins); setUsername(data.username); }
+    supabase.from("profiles").select("username, owned, opened, coins, buffs").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data) { setOwned((data.owned as Record<number, number>) || {}); setOpened(data.opened); setCoins(data.coins); setUsername(data.username); setBuffs(parseBuffs(data.buffs)); }
       setLoaded(true);
     });
   }, [user]);
 
   useEffect(() => {
     if (!loaded || (user && !access.data?.active)) return;
-    if (user) supabase.from("profiles").update({ owned, opened, coins, updated_at: new Date().toISOString() }).eq("id", user.id).then();
+    if (user) supabase.from("profiles").update({ owned, opened, coins, buffs: buffs.map(b => ({ ...b })), updated_at: new Date().toISOString() }).eq("id", user.id).then();
     else localStorage.setItem("cluck", JSON.stringify({ owned, opened, coins }));
-  }, [owned, opened, coins, loaded, user, access.data?.active]);
+  }, [owned, opened, coins, buffs, loaded, user, access.data?.active]);
 
   useEffect(() => {
     if (!toast) return;
@@ -204,8 +214,9 @@ export function Index() {
     setRipping(true);
     setTab("rip");
     setPack(null);
+    const drawCount = buffedCards(p.cards, buffs, Date.now());
     setTimeout(() => {
-      const cards = drawPack(p.cards, () => p.id === OOH_LA_LA_PACK.id ? rollOohLaLa() : roll(p.odds));
+      const cards = drawPack(drawCount, () => p.id === OOH_LA_LA_PACK.id ? rollOohLaLa() : roll(p.odds));
       setPack({ cards, type: p }); setRevealed(0); setRipping(false); setOpened((o) => o + 1);
       setOwned((o) => { const n = { ...o }; cards.forEach((c) => (n[c.id] = (n[c.id] || 0) + 1)); return n; });
     }, 700);
@@ -213,26 +224,39 @@ export function Index() {
 
   const combine = (c: Card) => {
     const next = NEXT[c.rarity];
-    if (!next || (owned[c.id] ?? 0) < 3) return;
-    const pool = CARDS.filter((x) => x.rarity === next && isStandardCard(x));
+    const required = COMBINE_COST[c.rarity];
+    if (!user || !access.data?.active || !next || (owned[c.id] ?? 0) < required) return;
+    const pool = combinePool(CARDS, c.rarity);
     const got = pool[Math.floor(Math.random() * pool.length)];
     if (!got) return;
-    setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 0) - 3; if ((n[c.id] ?? 0) <= 0) delete n[c.id]; n[got.id] = (n[got.id] || 0) + 1; return n; });
-    setToast(`Combined 3 ${c.name} into ${got.name}! ✨`);
+    setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 0) - required; if ((n[c.id] ?? 0) <= 0) delete n[c.id]; n[got.id] = (n[got.id] || 0) + 1; return n; });
+    setToast(`Combined ${required} ${c.name} into ${got.name}! ✨`);
+  };
+
+  const craftBuff = (selection: Record<number, number>, kind: BuffKind) => {
+    if (!user || !access.data?.active) return;
+    const ingredients = CARDS.filter(c => (selection[c.id] ?? 0) > 0).map(c => ({ id: c.id, rarity: c.rarity, count: selection[c.id] ?? 0 }));
+    const recipe = buffRecipe(ingredients);
+    if (!recipe.valid || ingredients.some(c => c.count > (owned[c.id] ?? 0))) return;
+    const expiresAt = Date.now() + recipe.durationMs;
+    setOwned(o => { const n = { ...o }; ingredients.forEach(c => { n[c.id] = (n[c.id] ?? 0) - c.count; if (!n[c.id]) delete n[c.id]; }); return n; });
+    setBuffs(previous => [...previous.filter(b => b.kind !== kind && b.expiresAt > Date.now()), { kind, multiplier: recipe.multiplier, expiresAt }]);
+    setToast(`Activated ${recipe.multiplier.toFixed(2)}× ${kind === "cards" ? "extra cards" : "sell bonus"}!`);
   };
 
   const sell = (c: Card) => {
-    if (!owned[c.id]) return;
+    if (!user || !access.data?.active || !owned[c.id]) return;
+    const value = buffedSell(SELL[c.rarity], buffs, Date.now());
     setOwned((o) => { const n = { ...o }; n[c.id] = (n[c.id] ?? 1) - 1; if (!n[c.id]) delete n[c.id]; return n; });
-    setCoins((v) => v + SELL[c.rarity]);
-    setToast(`Sold ${c.name} for ${SELL[c.rarity]} coins 🪙`);
+    setCoins((v) => v + value);
+    setToast(`Sold ${c.name} for ${value} coins 🪙`);
   };
 
   const done = pack && revealed >= pack.cards.length;
   const count = Object.keys(owned).length;
   const combos = CARDS
     .filter((c) => NEXT[c.rarity] && (owned[c.id] ?? 0) > 0)
-    .sort((a, b) => (((owned[b.id] ?? 0) >= 3 ? 1 : 0) - ((owned[a.id] ?? 0) >= 3 ? 1 : 0)) || RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity));
+    .sort((a, b) => (((owned[b.id] ?? 0) >= COMBINE_COST[b.rarity] ? 1 : 0) - ((owned[a.id] ?? 0) >= COMBINE_COST[a.rarity] ? 1 : 0)) || RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity));
   if (!loaded) return <TitlePage loading />;
   if (signedOut) return <><TitlePage />{toast && <p role="alert" className="fixed bottom-4 left-4 right-4 bg-card p-3 text-center font-bold text-destructive">{toast}</p>}</>;
   if (user && access.isPending) return <TitlePage loading />;
@@ -264,6 +288,7 @@ export function Index() {
           ))}
         </nav>
         {toast && <p className="mt-3 inline-block rounded-full bg-primary px-4 py-1 text-sm font-bold text-primary-foreground shadow-lg">{toast}</p>}
+        <ActiveBuffs buffs={buffs} now={now} />
       </header>
 
       {tab === "shop" && (
@@ -276,7 +301,7 @@ export function Index() {
                 <Button variant="ghost" type="button" onClick={() => buy(p)} disabled={ripping} aria-label={`Open ${p.name}`} className={`pack h-72 w-52 flex-col px-4 py-4 cursor-pointer max-w-full whitespace-normal ${p.id === OOH_LA_LA_PACK.id ? "pack-ooh" : ""} ${ripping ? "pack-rip" : "pack-idle"}`}>
                   {p.id === OOH_LA_LA_PACK.id ? <img src={OOH_LA_LA_IMAGES[31]} alt="Ooh La La" className="h-36 w-36 rounded-lg object-cover object-bottom" /> : <span className="text-6xl">{p.emoji}</span>}
                   <span className="font-display text-xl mt-2">{p.name.toUpperCase()}</span>
-                  <span className="text-xs font-bold opacity-80">{p.cards} cards · tap to buy & rip</span>
+                  <span className="text-xs font-bold opacity-80">{buffedCards(p.cards, buffs, now)} cards · tap to buy & rip</span>
                 </Button>
                 <p className="mt-3 text-center text-xs font-bold text-muted-foreground">{p.blurb}</p>
                 <p className={`mt-1 font-black ${coins >= p.cost ? "text-foreground" : "text-destructive"}`}>{p.cost === 0 ? "FREE" : `🪙 ${p.cost}`}</p>
@@ -329,10 +354,10 @@ export function Index() {
           <p className="mb-4 text-sm font-bold text-muted-foreground">Tap a card to sell one copy — common 🪙10 · rare 🪙30 · epic 🪙75 · legendary 🪙250 · ultra 🪙1000 · mythic 🪙10000.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-5">
             {CARDS.map((c) => owned[c.id] ? (
-              <button key={c.id} type="button" onClick={() => sell(c)} title={`Sell for ${SELL[c.rarity]} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
+              <button key={c.id} type="button" onClick={() => sell(c)} title={`Sell for ${buffedSell(SELL[c.rarity], buffs, now)} coins`} className="relative cursor-pointer rounded-none border-0 bg-transparent p-0 transition-transform hover:scale-105 active:scale-95">
                 <TCard c={c} small />
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full px-2 text-xs font-bold">x{owned[c.id]}</span>
-                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-card border border-border px-2 text-[10px] font-black shadow">🪙{SELL[c.rarity]}</span>
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-card border border-border px-2 text-[10px] font-black shadow">🪙{buffedSell(SELL[c.rarity], buffs, now)}</span>
               </button>
             ) : (
               <div key={c.id} className="aspect-[5/7] rounded-xl border-2 border-dashed border-border bg-card/40 flex items-center justify-center text-3xl text-muted-foreground shadow-inner">?</div>
@@ -344,29 +369,36 @@ export function Index() {
       {tab === "combine" && (
         <section className="max-w-5xl mx-auto">
           <h2 className="font-display text-3xl golden-title mb-1">Combine Lab</h2>
-          <p className="mb-2 text-center text-sm font-bold text-muted-foreground">Trade in 3 copies of a card for 1 random card of the next rarity.</p>
-          <p className="mb-6 text-center text-xs font-black uppercase tracking-widest text-muted-foreground">common → rare → epic → legendary → ultra</p>
+          <div className="my-4 flex justify-center gap-2" role="group" aria-label="Combine Lab section">
+            <Button variant={labMode === "cards" ? "default" : "outline"} aria-pressed={labMode === "cards"} onClick={() => setLabMode("cards")}>Combine cards</Button>
+            <Button variant={labMode === "buffs" ? "default" : "outline"} aria-pressed={labMode === "buffs"} onClick={() => setLabMode("buffs")}>Buffs</Button>
+          </div>
+          {labMode === "buffs" ? <BuffLab cards={CARDS} owned={owned} onCraft={craftBuff} renderCard={id => { const c = CARDS.find(c => c.id === id); return c ? <TCard c={c} small /> : null; }} /> : <>
+          <p className="mb-2 text-center text-sm font-bold text-muted-foreground">3 common → rare · 8 rare → epic · 15 epic → legendary · 30 legendary → Cheeky Boy</p>
+          <p className="mb-6 text-center text-xs font-bold text-muted-foreground">Ooh La La is pack-only. Ultra combines always make Cheeky Boy.</p>
           {combos.length === 0 ? (
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="text-7xl" style={{ animation: "bob 3s ease-in-out infinite" }}>⚗️</div>
-              <p className="font-bold text-muted-foreground">Nothing to combine yet — rip packs until you hold 3 of the same card.</p>
+              <p className="font-bold text-muted-foreground">No chickens to combine yet.</p>
               <Button variant="ghost" onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Go to the shop</Button>
             </div>
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {combos.map((c) => {
                 const have = owned[c.id] ?? 0;
-                const ready = have >= 3;
+                const required = COMBINE_COST[c.rarity];
+                const ready = have >= required;
                 return (
                   <div key={c.id} className="flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-card/90 p-5 shadow-xl backdrop-blur">
                     <TCard c={c} small />
-                    <p className="text-xs font-black text-muted-foreground">{have}/3 copies · makes a random {NEXT[c.rarity]}</p>
-                    <Button size="sm" disabled={!ready} onClick={() => combine(c)} className={`rounded-full font-black ${ready ? "bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95" : ""}`}>{ready ? `⚗️ Combine 3 → ${NEXT[c.rarity]}` : `Need ${3 - have} more`}</Button>
+                    <p className="text-xs font-black text-muted-foreground">{have}/{required} copies · makes {c.rarity === "legendary" ? "Cheeky Boy" : `a random ${NEXT[c.rarity]}`}</p>
+                    <Button size="sm" disabled={!ready} onClick={() => combine(c)} className={`rounded-full font-black ${ready ? "bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95" : ""}`}>{ready ? `⚗️ Combine ${required} → ${NEXT[c.rarity]}` : `Need ${required - have} more`}</Button>
                   </div>
                 );
               })}
             </div>
           )}
+          </>}
         </section>
       )}
       {tab === "leaderboard" && user && <Leaderboard userId={user.id} />}
