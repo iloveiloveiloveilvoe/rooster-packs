@@ -331,10 +331,10 @@ export function Index() {
             </div>
           ) : done ? (
             <div className="flex flex-col items-center">
+              <Button variant="ghost" type="button" onClick={() => buy(pack.type)} disabled={ripping || coins < pack.type.cost} aria-label={`Rip another ${pack.type.name}`} className="mb-6 rounded-full bg-primary px-6 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100">⚡ Rip again · {pack.type.name} {pack.type.cost === 0 ? "FREE" : `🪙 ${pack.type.cost}`}</Button>
               <div className="flex flex-wrap justify-center gap-3 mb-6 max-w-4xl">
                 {pack.cards.map((c, i) => <div key={i} className="w-44"><TCard c={c} small /></div>)}
               </div>
-              <Button variant="ghost" onClick={() => setTab("shop")} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95">Buy another pack</Button>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
