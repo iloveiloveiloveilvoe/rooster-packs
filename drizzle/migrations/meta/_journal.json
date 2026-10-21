@@ -36,6 +36,20 @@
       "when": 1792456857825,
       "tag": "0004_saved_player_buffs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792586074027,
+      "tag": "0005_admin_gift_chicken",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792586150916,
+      "tag": "0006_preserve_gifts_during_player_saves",
+      "breakpoints": true
     }
   ]
 }

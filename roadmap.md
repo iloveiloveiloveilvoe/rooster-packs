@@ -1,4 +1,5 @@
 # Tasks
+- [ ] Add authorized admin chicken gifting and verify delivery and permission enforcement.
 - [x] Replace the rip-screen "Buy another pack" button with a top "Rip again" button that re-rips the same pack type; verify free and paid packs plus the broke/disabled state.
 - [x] Set Ooh La La price to 1,000; scale combine costs to 30; preserve pack-only rewards.
 - [x] Add mixed-chicken buff crafting sliders, timed card and sale multipliers, saved buffs, and tests.

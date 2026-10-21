@@ -10,6 +10,8 @@
 <!-- LOVABLE:END -->
 
 - Keep moderation permissions in protected user_roles and enforce kick/ban status through database functions and restrictive profile RLS; the typed panel sequence only reveals UI, never grants permissions.
+- Admin chicken gifts use a database RPC that validates active admin status and catalog IDs before atomically incrementing the recipient's inventory; never grant cross-player profile update access.
+- Save gameplay inventory as serialized deltas through an owner-scoped RPC and refresh idle collections so stale client snapshots cannot erase admin gifts.
 - Expose the leaderboard through a signed-in RPC returning only names and coins; private collections remain owner-only.
 - Keep pack draw-order rules in a browser-safe module with unit tests; never sort reveals by rarity.
 - Keep exclusive-pack catalogs and weighted draws in browser-safe tested modules; exclude their cards from standard draw and combine reward pools so exclusive drop odds cannot be bypassed.
