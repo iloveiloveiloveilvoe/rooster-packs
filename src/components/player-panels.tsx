@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Shield, X, RefreshCw, LogOut, Ban, Check } from "lucide-react";
+import { Shield, X, RefreshCw, LogOut, Ban, Check, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ADMIN_SEQUENCE, advanceSequence } from "@/lib/pack-rules";
@@ -38,12 +38,13 @@ export function Leaderboard({ userId }: { userId: string }) {
   </section>;
 }
 
-export function AdminPanel({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
+export function AdminPanel({ userId, isAdmin, cards, onGift }: { userId: string; isAdmin: boolean; cards: { id: number; name: string; rarity: string }[]; onGift: (target: string) => void }) {
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
   useEffect(() => {
     let typed = "";
@@ -71,6 +72,19 @@ export function AdminPanel({ userId, isAdmin }: { userId: string; isAdmin: boole
     setBusy(false);
     await queryClient.invalidateQueries({ queryKey: ["admin-players", userId] });
   };
+  const gift = async (id: string, name: string) => {
+    const card = cards.find(c => String(c.id) === selected[id]);
+    if (!card || busy) return;
+    setBusy(true); setMessage("");
+    try {
+      const { error } = await supabase.rpc("admin_gift_chicken", { target: id, chicken_id: card.id });
+      if (error) throw error;
+      setMessage(`Gave ${name} one ${card.name}.`);
+      onGift(id);
+    } catch {
+      setMessage("Gift failed. Please try again.");
+    } finally { setBusy(false); }
+  };
   if (!visible || !isAdmin) return null;
   return <>
     <Button className="fixed left-3 top-3 z-30" size="icon" aria-label="Open admin panel" title="Admin panel" onClick={() => setOpen(true)}><Shield /></Button>
@@ -79,9 +93,18 @@ export function AdminPanel({ userId, isAdmin }: { userId: string; isAdmin: boole
         <div className="flex items-center justify-between"><h2 id="admin-heading" className="font-display text-2xl">Coop Admin</h2><Button variant="ghost" size="icon" aria-label="Close admin panel" onClick={() => setOpen(false)}><X /></Button></div>
         <input aria-label="Find player" placeholder="Find player…" value={search} onChange={e => setSearch(e.target.value)} className="my-4 w-full rounded-md border border-border bg-background p-3" />
         <p role="status" className="mb-3 text-sm">{message}</p>
-        {players.isPending ? <p>Loading players…</p> : players.isError ? <p role="alert">Couldn’t load players.</p> : players.data?.filter(p => p.username.toLowerCase().includes(search.toLowerCase())).map(p => <div key={p.id} className="flex items-center justify-between gap-2 border-b border-border py-3">
+        {players.isPending ? <p>Loading players…</p> : players.isError ? <p role="alert">Couldn’t load players.</p> : players.data?.filter(p => p.username.toLowerCase().includes(search.toLowerCase())).map(p => <div key={p.id} className="border-b border-border py-3">
+          <div className="flex items-center justify-between gap-2">
           <div className="min-w-0"><p className="break-all font-bold">{p.username}{p.id === userId ? " (you)" : ""}</p><p className="text-xs text-muted-foreground">🪙 {p.coins} {p.banned ? "· Banned" : ""}</p></div>
           {p.id !== userId && <div className="flex shrink-0 gap-1"><Button variant="outline" size="icon" disabled={busy || p.banned} title={`Kick ${p.username}`} aria-label={`Kick ${p.username}`} onClick={() => moderate(p.id, p.username, "kick")}><LogOut /></Button><Button variant={p.banned ? "outline" : "destructive"} size="icon" disabled={busy} title={`${p.banned ? "Unban" : "Ban"} ${p.username}`} aria-label={`${p.banned ? "Unban" : "Ban"} ${p.username}`} onClick={() => moderate(p.id, p.username, p.banned ? "unban" : "ban")}>{p.banned ? <Check /> : <Ban />}</Button></div>}
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <select aria-label={`Chicken for ${p.username}`} value={selected[p.id] ?? ""} onChange={e => setSelected(s => ({ ...s, [p.id]: e.target.value }))} disabled={busy} className="min-w-0 flex-1 rounded-md border border-border bg-background p-2 text-sm">
+              <option value="">Choose chicken…</option>
+              {cards.map(c => <option key={c.id} value={c.id}>{c.name} · {c.rarity}</option>)}
+            </select>
+            <Button size="icon" disabled={busy || !selected[p.id]} aria-label={`Give chicken to ${p.username}`} title={`Give chicken to ${p.username}`} onClick={() => gift(p.id, p.username)}><Gift /></Button>
+          </div>
         </div>)}
       </aside>
     </div>}

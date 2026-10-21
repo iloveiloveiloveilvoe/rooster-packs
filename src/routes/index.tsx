@@ -264,7 +264,12 @@ export function Index() {
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-8 farm-bg">
-      {user && <AdminPanel key={user.id} userId={user.id} isAdmin={access.data?.admin ?? false} />}
+      {user && <AdminPanel key={user.id} userId={user.id} isAdmin={access.data?.admin ?? false} cards={CARDS} onGift={target => {
+        if (target !== user.id) return;
+        void supabase.from("profiles").select("owned").eq("id", user.id).single().then(({ data }) => {
+          if (data) setOwned(data.owned as Record<number, number>);
+        });
+      }} />}
       <div className="sunburst" aria-hidden />
       <div className="sun-disc" aria-hidden />
       <div className="cloud h-7 w-28" style={{ top: "12%", left: "-15%", animationDuration: "60s" }} aria-hidden />
