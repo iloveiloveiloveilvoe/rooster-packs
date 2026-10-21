@@ -96,6 +96,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_gift_chicken: {
+        Args: { chicken_id: number; target: string }
+        Returns: undefined
+      }
       admin_players: {
         Args: never
         Returns: {
