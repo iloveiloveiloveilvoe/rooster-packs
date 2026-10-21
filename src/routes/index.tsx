@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { OOH_LA_LA_IMAGES } from "@/assets/ooh-la-la";
 import { OOH_LA_LA_CARDS, OOH_LA_LA_PACK, isStandardCard, rollOohLaLa } from "@/lib/ooh-la-la";
 import { NEXT, COMBINE_COST, combinePool, buffRecipe, buffedCards, buffedSell, parseBuffs, type Buff, type BuffKind } from "@/lib/combine-rules";
 import { BuffLab, ActiveBuffs } from "@/components/buff-lab";
+import { inventoryDelta } from "@/lib/inventory-sync";
 
 const CARD_IMAGES = { ...BREED_IMAGES, ...OOH_LA_LA_IMAGES };
 
@@ -150,6 +151,10 @@ export function Index() {
   const [revealed, setRevealed] = useState(0);
   const [ripping, setRipping] = useState(false);
   const [owned, setOwned] = useState<Record<number, number>>({});
+  const savedInventory = useRef<Record<number, number>>({});
+  const saveQueue = useRef(Promise.resolve());
+  const saveRevision = useRef(0);
+  const pendingSaves = useRef(0);
   const [opened, setOpened] = useState(0);
   const [coins, setCoins] = useState(100);
   const [user, setUser] = useState<User | null>(null);
@@ -190,16 +195,44 @@ export function Index() {
       return;
     }
     supabase.from("profiles").select("username, owned, opened, coins, buffs").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) { setOwned((data.owned as Record<number, number>) || {}); setOpened(data.opened); setCoins(data.coins); setUsername(data.username); setBuffs(parseBuffs(data.buffs)); }
+      if (data) { savedInventory.current = (data.owned as Record<number, number>) || {}; setOwned(savedInventory.current); setOpened(data.opened); setCoins(data.coins); setUsername(data.username); setBuffs(parseBuffs(data.buffs)); }
       setLoaded(true);
     });
   }, [user]);
 
   useEffect(() => {
     if (!loaded || (user && !access.data?.active)) return;
-    if (user) supabase.from("profiles").update({ owned, opened, coins, buffs: buffs.map(b => ({ ...b })), updated_at: new Date().toISOString() }).eq("id", user.id).then();
+    if (user) {
+      const delta = inventoryDelta(savedInventory.current, owned);
+      savedInventory.current = owned;
+      saveRevision.current += 1;
+      pendingSaves.current += 1;
+      saveQueue.current = saveQueue.current.then(async () => {
+        try {
+          const { error } = await supabase.rpc("save_player_progress", { inventory_delta: delta, saved_opened: opened, saved_coins: coins, saved_buffs: buffs.map(b => ({ ...b })) });
+          if (error) setToast("Couldn’t save your progress. Please reload before playing again.");
+        } finally { pendingSaves.current -= 1; }
+      }).catch(() => setToast("Couldn’t save your progress. Please reload before playing again."));
+    }
     else localStorage.setItem("cluck", JSON.stringify({ owned, opened, coins }));
   }, [owned, opened, coins, buffs, loaded, user, access.data?.active]);
+
+  useEffect(() => {
+    if (!user || !loaded || !access.data?.active) return;
+    let cancelled = false;
+    const refresh = async () => {
+      if (pendingSaves.current || ripping) return;
+      const revision = saveRevision.current;
+      const { data } = await supabase.from("profiles").select("owned").eq("id", user.id).single();
+      if (cancelled || !data || pendingSaves.current || revision !== saveRevision.current) return;
+      const inventory = data.owned as Record<number, number>;
+      if (Object.keys(inventoryDelta(savedInventory.current, inventory)).length === 0) return;
+      savedInventory.current = inventory;
+      setOwned(inventory);
+    };
+    const timer = setInterval(() => void refresh(), 3000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [user, loaded, access.data?.active, ripping]);
 
   useEffect(() => {
     if (!toast) return;
@@ -267,7 +300,7 @@ export function Index() {
       {user && <AdminPanel key={user.id} userId={user.id} isAdmin={access.data?.admin ?? false} cards={CARDS} onGift={target => {
         if (target !== user.id) return;
         void supabase.from("profiles").select("owned").eq("id", user.id).single().then(({ data }) => {
-          if (data) setOwned(data.owned as Record<number, number>);
+          if (data && !pendingSaves.current) { savedInventory.current = data.owned as Record<number, number>; setOwned(savedInventory.current); }
         });
       }} />}
       <div className="sunburst" aria-hidden />
